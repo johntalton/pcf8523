@@ -2,6 +2,7 @@ name: Publish (NPM / GitHub)
 on:
   release:
     types: [created]
+permissions: write-all
 jobs:
   release:
     runs-on: ubuntu-latest
