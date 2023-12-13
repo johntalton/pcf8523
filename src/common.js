@@ -7,6 +7,31 @@ export const BASE_CENTURY_Y2K = 2000
 
 export const RESET_MAGIC_VALUE = 0x58
 
+export const WEEKDAYS_MAP = [
+	'Sunday',
+	'Monday',
+	'Tuesday',
+	'Wednesday',
+	'Thursday',
+	'Friday',
+	'Saturday',
+]
+
+export const MONTHS_MAP = [
+	'January',
+	'February',
+	'March',
+	'April',
+	'May',
+	'June',
+	'July',
+	'August',
+	'September',
+	'October',
+	'November',
+	'December',
+]
+
 export class Common {
 	/**
 	 * @param {I2CAddressedBus} bus
@@ -167,31 +192,8 @@ export class Common {
 		const pm = ampm_mode ? BitSmush.extractBits(hoursByte, 7, 1) === 1 : undefined
 		const day = bcd(daysByte, 5, 2, 3, 4)
 		const weekdaysValue = BitSmush.extractBits(weekdaysByte, 2, 3)
-		const WEEKDAYS_MAP = [
-			'Sunday',
-			'Monday',
-			'Tuesday',
-			'Wednesday',
-			'Thursday',
-			'Friday',
-			'Saturday',
-		]
 		const weekday = WEEKDAYS_MAP[weekdaysValue]
 		const monthsValue = bcd(monthsByte, 4, 1, 3, 4)
-		const MONTHS_MAP = [
-			'January',
-			'February',
-			'March',
-			'April',
-			'May',
-			'June',
-			'July',
-			'August',
-			'September',
-			'October',
-			'November',
-			'December',
-		]
 		const month = MONTHS_MAP[monthsValue - 1]
 		const year = baseDecade + bcd(yearsByte, 7, 4, 3, 4)
 
@@ -212,22 +214,23 @@ export class Common {
 	/**
 	 * @param {I2CAddressedBus} bus
 	 */
-	static async setTime(bus, seconds, minutes, hours, century = BASE_CENTURY_Y2K) {
-		const buffer = new Uint8Array(TIME_REGISTER_LENGTH)
-
+	static async setTime(bus, seconds, minutes, hours, day, month, year, century = BASE_CENTURY_Y2K) {
 		function bcd(value, tensPos, tensLen, unitsPos, unitsLen) {
 			return value + 6 * Math.floor(value / 10)
 		}
 
-		const year = 2023 - century
+		if(year < 100) { console.warn('2-digit year / Y2K warning') }
+		const year2digit = year > 100 ? year - century : year
 
-		buffer[0] = bcd(0)
-		buffer[1] = bcd(20)
-		buffer[2] = bcd(15)
-		buffer[3] = bcd(13)
-		buffer[4] = bcd(3)
-		buffer[5] = bcd(12)
-		buffer[6] = bcd(year)
+		const buffer = Uint8Array.from([
+			bcd(seconds),
+			bcd(minutes),
+			bcd(hours),
+			bcd(day),
+			bcd(3),
+			bcd(month),
+			bcd(year2digit)
+		])
 
 		return bus.writeI2cBlock(TIME_REGISTER_START, buffer)
 	}
