@@ -17,7 +17,7 @@ export class PCF8523 {
 		this.century = BASE_CENTURY_Y2K
 	}
 
-	async softReset() { return Common.softReset(bus) }
+	async softReset() { return Common.softReset(this.#bus) }
 
 	async getProfile() { return Common.getProfile(this.#bus) }
 	async getTime() { return Common.getTime(this.#bus, false, this.century) }
