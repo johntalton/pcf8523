@@ -1,1 +1,1 @@
-# pcf8523
+# pcf8523 (Real Time Clock)

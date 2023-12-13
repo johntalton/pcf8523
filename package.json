@@ -1,0 +1,8 @@
+{
+	"name": "@johntalton/pcf8523",
+	"type": "module",
+	"dependencies": {
+		"@johntalton/and-other-delights": "^6.0.1",
+		"@johntalton/bitsmush": "^1.0.0"
+	}
+}
