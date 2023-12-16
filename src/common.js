@@ -104,11 +104,90 @@ export class Common {
 		return Converter.decodeAlarm(buffer, ampm_mode)
 	}
 
-	/**
-	 * @param {I2CAddressedBus} bus
-	 */
+	static async setAlarm(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {I2CAddressedBus} bus */
 	static async getOffset(bus) {
 		const buffer = await bus.readI2cBlock(REGISTER.OFFSET, 1)
 		return Converter.decodeOffset(buffer)
 	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async setOffset(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async getTimer(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER_BLOCK.TIMER.START, REGISTER_BLOCK.TIMER.LENGTH)
+		const u8 = new Uint8Array(buffer)
+
+		return {
+			...Converter.decodeTimerControl(u8.subarray(0, 1)),
+			...Converter.decodeTimerAControl(u8.subarray(1, 2)),
+			...Converter.decodeTimerBControl(u8.subarray(2, 3)),
+			...Converter.decodeTimerAValue(u8.subarray(3, 4)),
+			...Converter.decodeTimerBValue(u8.subarray(4, 5))
+		}
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async getTimerControl(bus, profile) {
+		const buffer = await bus.readI2cBlock(REGISTER.TIMER_CLOCK_OUT_CONTROL, 1)
+		return Converter.decodeTimerControl(buffer)
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async getTimerAControl(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.TIMER_A_FREQ_CONTROL, 1)
+		return Converter.decodeTimerAControl(buffer)
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async getTimerBControl(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.TIMER_B_FREQ_CONTROL, 1)
+		return Converter.decodeTimerBControl(buffer)
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async getTimerAValue(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.TIMER_A_REG, 1)
+		return Converter.decodeTimerAValue(buffer)
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async getTimerBValue(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.TIMER_B_REG, 1)
+		return Converter.decodeTimerBValue(buffer)
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async setTimerControl(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async setTimerAControl(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async setTimerBControl(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async setTimerAValue(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {I2CAddressedBus} bus */
+	static async setTimerBValue(bus, profile) {
+		throw new Error('not implemented')
+	}
+
+
+
 }

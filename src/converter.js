@@ -54,7 +54,7 @@ export class Converter {
 
 		const [ control1 ] = u8
 
-		const capSelRaw = BitSmush.extractBits(control1, 7, 1) === 1
+		const capSelRaw = BitSmush.extractBits(control1, 7, 1)
 		const stop = BitSmush.extractBits(control1, 5, 1) === 1
 		const ampm = BitSmush.extractBits(control1, 3, 1) === 1
 		const secondInterruptEnabled = BitSmush.extractBits(control1, 2, 1) === 1
@@ -182,10 +182,101 @@ export class Converter {
 	}
 
 	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
-	static decodeAlarm(buffer, ampm_mode) {}
+	static decodeAlarm(buffer, ampm_mode) {
+		throw new Error('not implemented')
+	}
 
 	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
-	static decodeOffset(buffer) {}
+	static decodeOffset(buffer) {
+		throw new Error('not implemented')
+	}
+
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeTimerControl(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
+
+		const [ byteValue ] = u8
+
+		const interruptAPulsedMode = BitSmush.extractBits(byteValue, 7, 1) === 1
+		const interruptBPulsedMode = BitSmush.extractBits(byteValue, 6, 1) === 1
+		const clockFrequencyValue = BitSmush.extractBits(byteValue, 5, 3)
+		//const timerAModeValue = BitSmush.extractBits(byteValue, 2, 2)
+		const watchdogAEnabled = BitSmush.extractBits(byteValue, 2, 1) === 1
+		const countdownTimerAEnabled = BitSmush.extractBits(byteValue, 1, 1) === 1
+		const countdownTimerBEnabled = BitSmush.extractBits(byteValue, 0, 1) === 1
+
+		// 000 32768
+		// 001 16384
+		// 010 8192
+		// 011 4096 high-Z
+		// 100 1024 high-Z
+		// 101 32 high-Z
+		// 110 1 high-Z
+		// 111 disabled (high-Z)
+
+		return {
+			interruptAPulsedMode,
+			interruptBPulsedMode,
+			clockFrequencyValue, clockFrequency,
+			watchdogAEnabled, countdownTimerAEnabled,
+			countdownTimerBEnabled
+		}
+	}
+
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeTimerAControl(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
+
+		const [ byteValue ] = u8
+
+		return {
+
+		}
+	}
+
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeTimerBControl(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
+
+		const [ byteValue ] = u8
+
+		return {
+
+		}
+	}
+
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeTimerAValue(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
+
+		const [ byteValue ] = u8
+
+		return {
+
+		}
+	}
+
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeTimerBValue(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
+
+		const [ byteValue ] = u8
+
+		return {
+
+		}
+	}
+
 
 	//
 	//
@@ -306,8 +397,12 @@ export class Converter {
 	}
 
 	/** @returns ArrayBuffer  */
-	static encodeAlarm() {}
+	static encodeAlarm() {
+throw new Error('no implementation')
+	}
 
 	/** @returns ArrayBuffer  */
-	static encodeOffset() {}
+	static encodeOffset() {
+		throw new Error('no implementation')
+	}
 }
