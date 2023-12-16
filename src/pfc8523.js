@@ -21,8 +21,21 @@ export class PCF8523 {
 	async softReset() { return Common.softReset(this.#bus) }
 
 	async getProfile() { return Common.getProfile(this.#bus) }
-	async getTime(ampm_mode = false, century = BASE_CENTURY_Y2K) { return Common.getTime(this.#bus, ampm_mode, century ?? this.#century) }
-	async setTime(seconds, minutes, hours, day, month, year, ampm_mode = false, century = BASE_CENTURY_Y2K) { return Common.setTime(this.#bus, seconds, minutes, hours, day, month, year) }
 
-	async setControl3(profile) { return Common.setControl3(this.#bus, profile) }
+  async getControl1() { return Common.getControl1(this.#bus) }
+  async getControl2() { return Common.getControl2(this.#bus) }
+  async getControl3() { return Common.getControl3(this.#bus) }
+
+  async setControl1(profile) { return Common.setControl1(this.#bus, profile) }
+  async setControl2(profile) { return Common.setControl2(this.#bus, profile) }
+  async setControl3(profile) { return Common.setControl3(this.#bus, profile) }
+
+	async getTime(ampm_mode = false, century) { return Common.getTime(this.#bus, ampm_mode, century ?? this.#century) }
+	async setTime(seconds, minutes, hours, day, month, year, ampm_mode = false, century) {
+    return Common.setTime(this.#bus, seconds, minutes, hours, day, month, year, ampm_mode, century ?? this.#century)
+  }
+
+	async getAlarm() { return Common.getAlarm(this.#bus) }
+
+  async getOffset() { return Common.getOffset(this.#bus) }
 }

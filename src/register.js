@@ -30,5 +30,13 @@ export const REGISTER = {
   Tmr_B_reg: 0x13,
 }
 
-export const TIME_REGISTER_START = REGISTER.SECONDS
-export const TIME_REGISTER_LENGTH = 7
+export const REGISTER_BLOCK = {
+  TIME: {
+    START: REGISTER.SECONDS,
+    LENGTH: 7
+  },
+  ALARM: {
+    START: REGISTER.MINUTE_ALARM,
+    LENGTH: 4
+  }
+}

@@ -1,7 +1,7 @@
 import { I2CAddressedBus } from '@johntalton/and-other-delights'
 import { Converter } from './converter.js'
 
-import { REGISTER, TIME_REGISTER_START, TIME_REGISTER_LENGTH } from './register.js'
+import { REGISTER, REGISTER_BLOCK } from './register.js'
 
 export const RESET_MAGIC_VALUE = 0x58
 
@@ -34,6 +34,46 @@ export class Common {
 	/**
 	 * @param {I2CAddressedBus} bus
 	 */
+	static async getControl1(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.CONTROL_1, 1)
+		return Converter.decodeControl1(buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
+	static async getControl2(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.CONTROL_2, 1)
+		return Converter.decodeControl2(buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
+	static async getControl3(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.CONTROL_3, 1)
+		return Converter.decodeControl3(buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
+	static async setControl1(bus, profile) {
+		const buffer = Converter.encodeControl1(profile)
+		return bus.writeI2cBlock(REGISTER.CONTROL_1, buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
+	static async setControl2(bus, profile) {
+		const buffer = Converter.encodeControl2(profile)
+		return bus.writeI2cBlock(REGISTER.CONTROL_2, buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
 	static async setControl3(bus, profile) {
 		const buffer = Converter.encodeControl3(profile)
 		return bus.writeI2cBlock(REGISTER.CONTROL_3, buffer)
@@ -43,7 +83,7 @@ export class Common {
 	 * @param {I2CAddressedBus} bus
 	 */
 	static async getTime(bus, ampm_mode, baseDecade) {
-		const buffer = await bus.readI2cBlock(TIME_REGISTER_START, TIME_REGISTER_LENGTH)
+		const buffer = await bus.readI2cBlock(REGISTER_BLOCK.TIME.START, REGISTER_BLOCK.TIME.LENGTH)
 		return Converter.decodeTime(buffer, ampm_mode, baseDecade)
 	}
 
@@ -51,7 +91,24 @@ export class Common {
 	 * @param {I2CAddressedBus} bus
 	 */
 	static async setTime(bus, seconds, minutes, hours, day, month, year, ampm_mode, century) {
-		const buffer = Converter.encodeTime(seconds, minutes, hours, day, month, year, century)
-		return bus.writeI2cBlock(TIME_REGISTER_START, buffer)
+		const buffer = Converter.encodeTime(seconds, minutes, hours, day, month, year, ampm_mode, century)
+		return bus.writeI2cBlock(REGISTER_BLOCK.TIME.START, buffer)
+	}
+
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
+	static async getAlarm(bus, ampm_mode) {
+		const buffer = await bus.readI2cBlock(REGISTER_BLOCK.ALARM.START, REGISTER_BLOCK.ALARM.LENGTH)
+		return Converter.decodeAlarm(buffer, ampm_mode)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 */
+	static async getOffset(bus) {
+		const buffer = await bus.readI2cBlock(REGISTER.OFFSET, 1)
+		return Converter.decodeOffset(buffer)
 	}
 }

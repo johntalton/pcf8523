@@ -139,7 +139,12 @@ export class Converter {
 			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
 			new Uint8Array(buffer)
 
-		if (u8.byteLength !== 1) { throw new Error('invalid time length') }
+		// this is "the same" as the registers byte count to read
+		// though, that is in terms of register lengths and this
+		// is in terms of bytes in the packed buffer
+		// this is a validation value as apposed to physical read value 🤷🏻‍♂️
+		const TIME_LENGTH = 7
+		if (u8.byteLength !== TIME_LENGTH) { throw new Error('invalid time length') }
 
 		const [
 			secondsByte,
@@ -180,14 +185,15 @@ export class Converter {
 	}
 
 	//
-
+	//
+	//
 
 	static encodeControl1() {}
 
 	static encodeControl2() {}
 
 	/** @returns ArrayBuffer  */
-	static encodeControl3() {
+	static encodeControl3(profile) {
 		const {
 			pmBatteryLowDetectionEnabled,
 			pmSwitchoverEnabled,
@@ -222,16 +228,18 @@ export class Converter {
 	}
 
 	/** @returns ArrayBuffer  */
-	static encodeTime(seconds, minutes, hours, day, month, year, century) {
-		if(year < 100) { console.warn('2-digit year / Y2K warning') }
-		const year2digit = year > 100 ? year - century : year
+	static encodeTime(seconds, minutes, hours, day, month, year, ampm_mode, century) {
+		if(year < 100 && century === undefined) { console.warn('2-digit year / Y2K warning') }
+		const year2digit = year >= 100 ? Math.max(0, year - century) : year
+
+		const OS_MASK = 0x7f
 
 		const buffer = Uint8Array.from([
-			encodeBCD(seconds),
+			encodeBCD(seconds & OS_MASK),
 			encodeBCD(minutes),
-			encodeBCD(hours),
+			encodeBCD(hours), // TODO encode ampm
 			encodeBCD(day),
-			encodeBCD(3),  // TODO calculate day of week? or require
+			encodeBCD(0),  // TODO calculate day of week? or require
 			encodeBCD(month),
 			encodeBCD(year2digit)
 		])
