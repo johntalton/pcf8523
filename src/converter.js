@@ -56,20 +56,15 @@ export class Converter {
 
 		const capSelRaw = BitSmush.extractBits(control1, 7, 1) === 1
 		const stop = BitSmush.extractBits(control1, 5, 1) === 1
-		const reset = BitSmush.extractBits(control1, 4, 1) === 1
 		const ampm = BitSmush.extractBits(control1, 3, 1) === 1
-		const second = BitSmush.extractBits(control1, 2, 1) === 1
-		const alarm = BitSmush.extractBits(control1, 1, 1) === 1
-		const correction = BitSmush.extractBits(control1, 0, 1) === 1
+		const secondInterruptEnabled = BitSmush.extractBits(control1, 2, 1) === 1
+		const alarmInterruptEnabled = BitSmush.extractBits(control1, 1, 1) === 1
+		const correctionInterruptEnabled = BitSmush.extractBits(control1, 0, 1) === 1
 
 		return {
-			CAP_SEL: capSelRaw === 1 ? CAP_VALUES.TWELVE : CAP_VALUES.SEVEN,
-			STOP: stop,
-			RESET: reset,
-			AM_PM_MODE: ampm,
-			SECOND_INTERRUPT: second,
-			ALARM_INTERRUPT: alarm,
-			CORRECTION_INTERRUPT: correction
+			capacitorSelection: capSelRaw === 1 ? CAP_VALUES.TWELVE : CAP_VALUES.SEVEN,
+			stop, ampm,
+			secondInterruptEnabled, alarmInterruptEnabled, correctionInterruptEnabled
 		}
 	}
 
@@ -86,20 +81,20 @@ export class Converter {
 		const countdownBFlag = BitSmush.extractBits(control2, 5, 1) === 1
 		const secondFlag = BitSmush.extractBits(control2, 4, 1) === 1
 		const alarmFlag = BitSmush.extractBits(control2, 3, 1) === 1
-		const watchdogEnabled = BitSmush.extractBits(control2, 2, 1) === 1
-		const countdownAEnabled = BitSmush.extractBits(control2, 1, 1) === 1
-		const countdownBEnabled = BitSmush.extractBits(control2, 0, 1) === 1
+		const watchdogAInterruptEnabled = BitSmush.extractBits(control2, 2, 1) === 1
+		const countdownAInterruptEnabled = BitSmush.extractBits(control2, 1, 1) === 1
+		const countdownBInterruptEnabled = BitSmush.extractBits(control2, 0, 1) === 1
 
 		return {
-			WATCHDOG_TIMER_A_FLAG: watchdogAFlag,
-			COUNTDOWN_TIMER_A_FLAG: countdownAFlag,
-			COUNTDOWN_TIMER_B_FLAG: countdownBFlag,
-			SECOND_INTERRUPT_FLAG: secondFlag,
-			ALARM_INTERRUPT_FLAG: alarmFlag,
+			watchdogAFlag,
+			countdownAFlag,
+			countdownBFlag,
+			secondFlag,
+			alarmFlag,
 
-			WATCHDOG_TIMER_ENABLED: watchdogEnabled,
-			COUNTDOWN_TIMER_A_ENABLED: countdownAEnabled,
-			COUNTDOWN_TIMER_B_ENABLED: countdownBEnabled,
+			watchdogAInterruptEnabled,
+			countdownAInterruptEnabled,
+			countdownBInterruptEnabled
 		}
 	}
 
@@ -114,22 +109,23 @@ export class Converter {
 		const powerMode = BitSmush.extractBits(control3, 7, 3)
 		const batterySwitchoverFlag = BitSmush.extractBits(control3, 3, 1) === 1
 		const batteryLowFlag = BitSmush.extractBits(control3, 2, 1) === 1
-		const batterySwitchoverEnabled = BitSmush.extractBits(control3, 1, 1) === 1
-		const batteryLowEnabled = BitSmush.extractBits(control3, 0, 1) === 1
+		const batterySwitchoverInterruptEnabled = BitSmush.extractBits(control3, 1, 1) === 1
+		const batteryLowInterruptEnabled = BitSmush.extractBits(control3, 0, 1) === 1
 
 		const pmBatteryLowDetectionEnabled = !(BitSmush.extractBits(powerMode, 2, 1) === 1)
 		const pmSwitchoverEnabled = !(BitSmush.extractBits(powerMode, 1, 1) === 1)
 		const pmDirectSwitchingEnabled = BitSmush.extractBits(powerMode, 0, 1) === 1
 
 		return {
-			POWER_MODE_BATTERY_LOW_DETECTION_ENABLED: pmBatteryLowDetectionEnabled,
-			POWER_MODE_SWITCHOVER_ENABLED: pmSwitchoverEnabled,
-			POWER_MODE_DIRECT_SWITCHING_ENABLED: pmDirectSwitchingEnabled,
+			pmBatteryLowDetectionEnabled,
+			pmSwitchoverEnabled,
+			pmDirectSwitchingEnabled,
 
-			BATTERY_SWITCHOVER_FLAG: batterySwitchoverFlag,
-			BATTERY_STATUS_LOW: batteryLowFlag,
-			BATTERY_SWITCHOVER_INTERRUPT_ENABLED: batterySwitchoverEnabled,
-			BATTER_STATUS_LOW_INTERRUPT_ENABLED: batteryLowEnabled
+			batterySwitchoverInterruptEnabled,
+			batteryLowInterruptEnabled,
+
+			batterySwitchoverFlag,
+			batteryLowFlag
 		}
 	}
 
@@ -164,8 +160,8 @@ export class Converter {
 			decodeBCD(hoursByte, 5, 2, 3, 4)
 		const pm = ampm_mode ? BitSmush.extractBits(hoursByte, 7, 1) === 1 : undefined
 		const day = decodeBCD(daysByte, 5, 2, 3, 4)
-		const weekdaysValue = BitSmush.extractBits(weekdaysByte, 2, 3)
-		const weekday = WEEKDAYS_MAP[weekdaysValue]
+		const weekdayValue = BitSmush.extractBits(weekdaysByte, 2, 3)
+		const weekday = WEEKDAYS_MAP[weekdayValue]
 		const monthsValue = decodeBCD(monthsByte, 4, 1, 3, 4)
 		const month = MONTHS_MAP[monthsValue - 1]
 		const year = baseDecade + decodeBCD(yearsByte, 7, 4, 3, 4)
@@ -177,6 +173,7 @@ export class Converter {
 			hour,
 			pm,
 			day,
+			weekdayValue,
 			weekday,
 			monthsValue,
 			month,
@@ -184,13 +181,74 @@ export class Converter {
 		}
 	}
 
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeAlarm(buffer, ampm_mode) {}
+
+	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	static decodeOffset(buffer) {}
+
 	//
 	//
 	//
 
-	static encodeControl1() {}
+	/** @returns ArrayBuffer  */
+	static encodeControl1(profile) {
+		const {
+			capacitorSelection,
+			stop,
+			ampm,
+			secondInterruptEnabled,
+			alarmInterruptEnabled,
+			correctionInterruptEnabled
+		} = profile
 
-	static encodeControl2() {}
+		const capSelRaw = capacitorSelection === CAP_VALUES.SEVEN ? 0 :
+			capacitorSelection === CAP_VALUES.TWELVE ? 1 :
+			// throw new Error('unknown cap value') // this should be a thing
+			0
+
+		const byteValue = BitSmush.smushBits([
+			[7, 1], [5, 1], [3, 1], [2, 1], [1, 1], [0, 1]
+		], [
+			capSelRaw, stop, ampm, secondInterruptEnabled, alarmInterruptEnabled, correctionInterruptEnabled
+		])
+
+		const buffer = Uint8Array.from([ byteValue ])
+		return buffer.buffer
+	}
+
+	/** @returns ArrayBuffer  */
+	static encodeControl2(profile) {
+		const {
+			clearCountdownAFlag,
+			clearCountdownBFlag,
+			clearSecondFlag,
+			clearAlarmFlag,
+
+			watchdogInterruptEnabled,
+			countdownAInterruptEnabled,
+			countdownBInterruptEnabled,
+		} = profile
+
+
+		const byteValue = BitSmush.smushBits([
+			[6, 1], [5, 1], [4, 1], [3, 1],
+			[2, 1], [1, 1], [0, 1]
+		],
+		[
+			clearCountdownAFlag ? 0 : 1,
+			clearCountdownBFlag ? 0 : 1,
+			clearSecondFlag ? 0 : 1,
+			clearAlarmFlag ? 0 : 1,
+
+			watchdogInterruptEnabled ? 1 : 0,
+			countdownAInterruptEnabled ? 1 : 0,
+			countdownBInterruptEnabled ? 1 : 0,
+		])
+
+		const buffer = Uint8Array.from([ byteValue ])
+		return buffer.buffer
+	}
 
 	/** @returns ArrayBuffer  */
 	static encodeControl3(profile) {
@@ -198,9 +256,11 @@ export class Converter {
 			pmBatteryLowDetectionEnabled,
 			pmSwitchoverEnabled,
 			pmDirectSwitchingEnabled,
+
 			clearBatterSwitchoverFlag,
-			switchoverEnabled,
-			batteryLowEnabled,
+
+			batterySwitchoverInterruptEnabled,
+			batteryLowInterruptEnabled,
 		} = profile
 
 		const powerMode = BitSmush.smushBits([
@@ -217,11 +277,9 @@ export class Converter {
 			powerMode,
 			clearBatterSwitchoverFlag ? 0 : 1,
 			1,
-			switchoverEnabled ? 1 : 0,
-			batteryLowEnabled ? 1 : 0
+			batterySwitchoverInterruptEnabled ? 1 : 0,
+			batteryLowInterruptEnabled ? 1 : 0
 		])
-
-		// console.log({ powerMode, byteValue })
 
 		const buffer = Uint8Array.from([ byteValue ])
 		return buffer.buffer
@@ -246,4 +304,10 @@ export class Converter {
 
 		return buffer.buffer
 	}
+
+	/** @returns ArrayBuffer  */
+	static encodeAlarm() {}
+
+	/** @returns ArrayBuffer  */
+	static encodeOffset() {}
 }
