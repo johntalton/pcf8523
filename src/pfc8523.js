@@ -7,14 +7,10 @@ export class PCF8523 {
 	#bus
 	#century
 
-	/**
-	 * @param {I2CAddressedBus} bus
-	*/
+	/** @param {I2CAddressedBus} bus */
 	static from(bus) { return new PCF8523(bus) }
 
-	/**
-	 * @param {I2CAddressedBus} bus
-	*/
+	/** @param {I2CAddressedBus} bus */
 	constructor(bus) {
 		this.#bus = bus
 		this.#century = BASE_CENTURY_Y2K

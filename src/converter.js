@@ -34,7 +34,6 @@ export const MONTHS_MAP = [
 
 export function decodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
 	//return value - 6 * (value >> 4)
-
 	return 10 * BitSmush.extractBits(value, tensPos, tensLen) +
 		BitSmush.extractBits(value, unitsPos, unitsLen)
 }
@@ -398,7 +397,7 @@ export class Converter {
 
 	/** @returns ArrayBuffer  */
 	static encodeAlarm() {
-throw new Error('no implementation')
+		throw new Error('no implementation')
 	}
 
 	/** @returns ArrayBuffer  */
