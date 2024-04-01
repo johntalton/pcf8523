@@ -10,7 +10,7 @@
 		"src/**/*.js"
 	],
 	"dependencies": {
-		"@johntalton/and-other-delights": "^6.0.1",
+		"@johntalton/and-other-delights": "^7.0.0",
 		"@johntalton/bitsmush": "^1.0.0"
 	}
 }
