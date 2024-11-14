@@ -139,7 +139,7 @@ export class Converter {
 		// is in terms of bytes in the packed buffer
 		// this is a validation value as apposed to physical read value 🤷🏻‍♂️
 		const TIME_LENGTH = 7
-		if (u8.byteLength !== TIME_LENGTH) { throw new Error('invalid time length') }
+		if (u8.byteLength < TIME_LENGTH) { throw new Error('invalid time length - short') }
 
 		const [
 			secondsByte,
