@@ -9,7 +9,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     # Publish to NPM
-    - uses: actions/setup-node@v4.0.2
+    - uses: actions/setup-node@v4.2.0
       with:
         node-version: '14'
         registry-url: 'https://registry.npmjs.org/'
@@ -21,7 +21,7 @@ jobs:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     # Publish to GitHub
-    # - uses: actions/setup-node@v4.0.2
+    # - uses: actions/setup-node@v4.2.0
     #   with:
     #     node-version: '20'
     #     registry-url: 'https://npm.pkg.github.com/'
