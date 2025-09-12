@@ -1,6 +1,6 @@
 {
 	"name": "@johntalton/pcf8523",
-	"version": "2.0.2",
+	"version": "2.1.0",
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
@@ -9,8 +9,15 @@
 	"files": [
 		"src/**/*.js"
 	],
+	"scripts": {
+		"test": "node --test",
+		"coverage": "c8 --check-coverage --reporter lcov --reporter text npm run test"
+	},
 	"dependencies": {
-		"@johntalton/and-other-delights": "^8.3.0",
-		"@johntalton/bitsmush": "^1.0.1"
+		"@johntalton/bitsmush": "^1.0.2"
+	},
+	"devDependencies": {
+		"@johntalton/and-other-delights": "^8.6.4",
+		"c8": "^10.1.3"
 	}
 }

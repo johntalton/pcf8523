@@ -1,7 +1,9 @@
 import { Common } from './common.js'
-import { BASE_CENTURY_Y2K } from './converter.js'
+import { BASE_CENTURY_Y2K } from './defs.js'
 
-export const DEFAULT_PCF8523_ADDRESS = 0x68
+/**
+ * @import { I2CAddressedBus } from '@johntalton/and-other-delights'
+ */
 
 export class PCF8523 {
 	#bus

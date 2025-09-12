@@ -1,36 +1,37 @@
 import { BitSmush } from '@johntalton/bitsmush'
 
-export const BASE_CENTURY_Y2K = 2000
+import {
+	BASE_CENTURY_Y2K,
+	BIT_SET,
+	BIT_UNSET,
+	BYTE_LENGTH_ALARM,
+	BYTE_LENGTH_ONE,
+	BYTE_LENGTH_TIME,
+	CAP_VALUES,
+	MONTHS_MAP,
+	OFFSET_LSB_PPM,
+	OFFSET_MODE,
+	WEEKDAYS_MAP
+} from './defs.js'
 
-export const CAP_VALUES = {
-	SEVEN: '7pF',
-	TWELVE: '12.5pF'
-}
-
-export const WEEKDAYS_MAP = [
-	'Sunday',
-	'Monday',
-	'Tuesday',
-	'Wednesday',
-	'Thursday',
-	'Friday',
-	'Saturday',
-]
-
-export const MONTHS_MAP = [
-	'January',
-	'February',
-	'March',
-	'April',
-	'May',
-	'June',
-	'July',
-	'August',
-	'September',
-	'October',
-	'November',
-	'December',
-]
+/**
+ * @import { I2CBufferSource } from '@johntalton/and-other-delights'
+ * @import {
+ *  Control1,
+ *  Control2, Control2Clear,
+ *  Control3, Control3Clear,
+ *  Time, CoreTime,
+ *  Offset,
+ *  TimerControl,
+ *  TimerAFrequencyControl,
+ *  TimerBFrequencyControl,
+ *  AlarmMinute,
+ *  AlarmHour,
+ *  AlarmDay,
+ *  AlarmWeekday,
+ *  Alarm
+ * } from './defs.js'
+ */
 
 export function decodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
 	//return value - 6 * (value >> 4)
@@ -44,45 +45,100 @@ export function encodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
 	// ...
 }
 
+export function decode7BitTwosComplement(value) {
+	const SIGN_MASK = 0b0100_0000
+	const SEVEN_BIT_MASK = 0b0111_1111
+	if((value & SIGN_MASK) !== 0) { return -((~value & SEVEN_BIT_MASK) + 1) }
+	return value
+}
+
+/**
+ * @param {CoreTime} time
+ * @returns {Date}
+ */
+export function decodeTimeToDate(time) {
+	const { year, monthsValue, day, hour, minute, second } = time
+
+	return new Date(Date.UTC(
+		year,
+		monthsValue - 1,
+		day,
+		hour, minute, second))
+}
+
+
+/**
+ * @param {Date} date
+ * @param {number} century
+ * @returns {CoreTime}
+ */
+export function encodeTimeFromDate(date, century) {
+	const second = date.getUTCSeconds()
+	const minute = date.getUTCMinutes()
+	const hour = date.getUTCHours()
+
+	const day = date.getUTCDate()
+	const monthsValue = date.getUTCMonth() + 1
+	const year = date.getUTCFullYear() - century
+
+	return {
+		second,
+		minute,
+		hour,
+		day,
+		monthsValue,
+		year
+	}
+}
+
 export class Converter {
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {Control1}
+	 */
   static decodeControl1(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ control1 ] = u8
 
 		const capSelRaw = BitSmush.extractBits(control1, 7, 1)
-		const stop = BitSmush.extractBits(control1, 5, 1) === 1
-		const ampm = BitSmush.extractBits(control1, 3, 1) === 1
-		const secondInterruptEnabled = BitSmush.extractBits(control1, 2, 1) === 1
-		const alarmInterruptEnabled = BitSmush.extractBits(control1, 1, 1) === 1
-		const correctionInterruptEnabled = BitSmush.extractBits(control1, 0, 1) === 1
+		const stop = BitSmush.extractBits(control1, 5, 1) === BIT_SET
+		const ampm = BitSmush.extractBits(control1, 3, 1) === BIT_SET
+		const secondInterruptEnabled = BitSmush.extractBits(control1, 2, 1) === BIT_SET
+		const alarmInterruptEnabled = BitSmush.extractBits(control1, 1, 1) === BIT_SET
+		const correctionInterruptEnabled = BitSmush.extractBits(control1, 0, 1) === BIT_SET
 
 		return {
-			capacitorSelection: capSelRaw === 1 ? CAP_VALUES.TWELVE : CAP_VALUES.SEVEN,
-			stop, ampm,
-			secondInterruptEnabled, alarmInterruptEnabled, correctionInterruptEnabled
+			capacitorSelection: capSelRaw === 0 ? CAP_VALUES.SEVEN : CAP_VALUES.TWELVE,
+			stop,
+			ampm,
+			secondInterruptEnabled,
+			alarmInterruptEnabled,
+			correctionInterruptEnabled
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {Control2}
+	 */
 	static decodeControl2(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ control2 ] = u8
 
-		const watchdogAFlag = BitSmush.extractBits(control2, 7, 1) === 1
-		const countdownAFlag = BitSmush.extractBits(control2, 6, 1) === 1
-		const countdownBFlag = BitSmush.extractBits(control2, 5, 1) === 1
-		const secondFlag = BitSmush.extractBits(control2, 4, 1) === 1
-		const alarmFlag = BitSmush.extractBits(control2, 3, 1) === 1
-		const watchdogAInterruptEnabled = BitSmush.extractBits(control2, 2, 1) === 1
-		const countdownAInterruptEnabled = BitSmush.extractBits(control2, 1, 1) === 1
-		const countdownBInterruptEnabled = BitSmush.extractBits(control2, 0, 1) === 1
+		const watchdogAFlag = BitSmush.extractBits(control2, 7, 1) === BIT_SET
+		const countdownAFlag = BitSmush.extractBits(control2, 6, 1) === BIT_SET
+		const countdownBFlag = BitSmush.extractBits(control2, 5, 1) === BIT_SET
+		const secondFlag = BitSmush.extractBits(control2, 4, 1) === BIT_SET
+		const alarmFlag = BitSmush.extractBits(control2, 3, 1) === BIT_SET
+		const watchdogAInterruptEnabled = BitSmush.extractBits(control2, 2, 1) === BIT_SET
+		const countdownAInterruptEnabled = BitSmush.extractBits(control2, 1, 1) === BIT_SET
+		const countdownBInterruptEnabled = BitSmush.extractBits(control2, 0, 1) === BIT_SET
 
 		return {
 			watchdogAFlag,
@@ -97,11 +153,14 @@ export class Converter {
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {Control3}
+	 */
 	static decodeControl3(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ control3 ] = u8
 
@@ -128,18 +187,16 @@ export class Converter {
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
-	static decodeTime(buffer, ampm_mode, baseDecade) {
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @param {boolean} [ampm_mode = false]
+	 * @param {number} [baseCentury = BASE_CENTURY_Y2K]
+	 * @returns {Time}
+	 */
+	static decodeTime(buffer, ampm_mode = false, baseCentury = BASE_CENTURY_Y2K) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
-
-		// this is "the same" as the registers byte count to read
-		// though, that is in terms of register lengths and this
-		// is in terms of bytes in the packed buffer
-		// this is a validation value as apposed to physical read value 🤷🏻‍♂️
-		const TIME_LENGTH = 7
-		if (u8.byteLength < TIME_LENGTH) { throw new Error('invalid time length - short') }
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_TIME) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_TIME)
 
 		const [
 			secondsByte,
@@ -163,7 +220,7 @@ export class Converter {
 		const weekday = WEEKDAYS_MAP[weekdayValue]
 		const monthsValue = decodeBCD(monthsByte, 4, 1, 3, 4)
 		const month = MONTHS_MAP[monthsValue - 1]
-		const year = baseDecade + decodeBCD(yearsByte, 7, 4, 3, 4)
+		const year = baseCentury + decodeBCD(yearsByte, 7, 4, 3, 4)
 
 		return {
 			integrity,
@@ -180,100 +237,231 @@ export class Converter {
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {AlarmMinute}
+	 */
+	static decodeAlarmMinute(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
+
+		const [ byteValue ] = u8
+
+		const minuteEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const minute = decodeBCD(byteValue, 6, 3, 3, 4)
+
+		return {
+			minuteEnabled,
+			minute
+		}
+	}
+
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @param {boolean} ampm_mode
+	 * @returns {AlarmHour}
+	 */
+	static decodeAlarmHour(buffer, ampm_mode) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
+
+		const [ byteValue ] = u8
+
+		const hourEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const pm = ampm_mode ? (BitSmush.extractBits(byteValue, 5, 1) === 1) : undefined
+		const hour = ampm_mode ?
+			decodeBCD(byteValue, 4, 1, 3, 4) :
+			decodeBCD(byteValue, 5, 2, 3, 4)
+
+		return {
+			hourEnabled,
+			hour
+		}
+	}
+
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {AlarmDay}
+	 */
+	static decodeAlarmDay(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
+
+		const [ byteValue ] = u8
+
+		const dayEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const day = decodeBCD(byteValue, 5, 2, 3, 4)
+
+		return {
+			dayEnabled,
+			day
+		}
+	}
+
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {AlarmWeekday}
+	 */
+	static decodeAlarmWeekday(buffer) {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
+
+		const [ byteValue ] = u8
+
+		const weekdayEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const weekdayValue = BitSmush.extractBits(byteValue, 2, 3)
+		const weekday = WEEKDAYS_MAP[weekdayValue]
+
+		return {
+			weekdayEnabled,
+			weekdayValue,
+			weekday
+		}
+	}
+
+
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @param {boolean} ampm_mode
+	 * @returns {Alarm}
+	 */
 	static decodeAlarm(buffer, ampm_mode) {
-		throw new Error('not implemented')
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ALARM) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ALARM)
+
+		const minute = Converter.decodeAlarmMinute(u8.subarray(0))
+		const hour = Converter.decodeAlarmHour(u8.subarray(1), ampm_mode)
+		const day = Converter.decodeAlarmDay(u8.subarray(2))
+		const weekday = Converter.decodeAlarmWeekday(u8.subarray(3))
+
+		return {
+			...minute,
+			...hour,
+			...day,
+			...weekday
+		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {Offset}
+	 */
 	static decodeOffset(buffer) {
-		throw new Error('not implemented')
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
+
+		const [ byteValue ] = u8
+
+		const mode = BitSmush.extractBits(byteValue, 7, 1)
+		const offsetValue7BitTwos = BitSmush.extractBits(byteValue, 6, 7)
+		const offsetValue = decode7BitTwosComplement(offsetValue7BitTwos)
+
+		const offsetLSB = mode === OFFSET_MODE.ONCE_EVERY_TWO_HOURS ? OFFSET_LSB_PPM.MODE_0 : OFFSET_LSB_PPM.MODE_1
+		const offsetPPM = offsetValue * offsetLSB
+
+		return {
+			mode,
+			offsetValue,
+			offsetPPM
+		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {TimerControl}
+	 */
 	static decodeTimerControl(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ byteValue ] = u8
 
 		const interruptAPulsedMode = BitSmush.extractBits(byteValue, 7, 1) === 1
 		const interruptBPulsedMode = BitSmush.extractBits(byteValue, 6, 1) === 1
 		const clockFrequencyValue = BitSmush.extractBits(byteValue, 5, 3)
-		//const timerAModeValue = BitSmush.extractBits(byteValue, 2, 2)
-		const watchdogAEnabled = BitSmush.extractBits(byteValue, 2, 1) === 1
-		const countdownTimerAEnabled = BitSmush.extractBits(byteValue, 1, 1) === 1
+		const timerAControl = BitSmush.extractBits(byteValue, 2, 2)
 		const countdownTimerBEnabled = BitSmush.extractBits(byteValue, 0, 1) === 1
-
-		// 000 32768
-		// 001 16384
-		// 010 8192
-		// 011 4096 high-Z
-		// 100 1024 high-Z
-		// 101 32 high-Z
-		// 110 1 high-Z
-		// 111 disabled (high-Z)
 
 		return {
 			interruptAPulsedMode,
 			interruptBPulsedMode,
-			clockFrequencyValue, clockFrequency,
-			watchdogAEnabled, countdownTimerAEnabled,
+			clockFrequencyValue,
+			timerAControl,
 			countdownTimerBEnabled
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {TimerAFrequencyControl}
+	*/
 	static decodeTimerAControl(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ byteValue ] = u8
 
-		return {
+		const sourceClock = BitSmush.extractBits(byteValue, 2, 3)
 
+		return {
+			sourceClock
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {TimerBFrequencyControl}
+	*/
 	static decodeTimerBControl(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ byteValue ] = u8
 
-		return {
+		const pulseWidth = BitSmush.extractBits(byteValue, 6, 3)
+		const sourceClock = BitSmush.extractBits(byteValue, 2, 3)
 
+		return {
+			sourceClock,
+			pulseWidth
 		}
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {number}
+	*/
 	static decodeTimerAValue(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ byteValue ] = u8
 
-		return {
-
-		}
+		return byteValue
 	}
 
-	/** @param {ArrayBufferLike|ArrayBufferView} buffer  */
+	/**
+	 * @param {I2CBufferSource} buffer
+	 * @returns {number}
+	*/
 	static decodeTimerBValue(buffer) {
 		const u8 = ArrayBuffer.isView(buffer) ?
-			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
-			new Uint8Array(buffer)
+			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_ONE) :
+			new Uint8Array(buffer, 0, BYTE_LENGTH_ONE)
 
 		const [ byteValue ] = u8
 
-		return {
-
-		}
+		return byteValue
 	}
 
 
@@ -281,7 +469,10 @@ export class Converter {
 	//
 	//
 
-	/** @returns ArrayBuffer  */
+	/**
+	 * @param {Control1} profile
+	 * @returns {I2CBufferSource}
+	 */
 	static encodeControl1(profile) {
 		const {
 			capacitorSelection,
@@ -292,115 +483,127 @@ export class Converter {
 			correctionInterruptEnabled
 		} = profile
 
-		const capSelRaw = capacitorSelection === CAP_VALUES.SEVEN ? 0 :
-			capacitorSelection === CAP_VALUES.TWELVE ? 1 :
-			// throw new Error('unknown cap value') // this should be a thing
-			0
+		const capSelRaw = capacitorSelection === CAP_VALUES.TWELVE ? BIT_SET : BIT_UNSET
 
 		const byteValue = BitSmush.smushBits([
 			[7, 1], [5, 1], [3, 1], [2, 1], [1, 1], [0, 1]
 		], [
-			capSelRaw, stop, ampm, secondInterruptEnabled, alarmInterruptEnabled, correctionInterruptEnabled
+			capSelRaw,
+			stop ? BIT_SET : BIT_UNSET,
+			ampm ? BIT_SET : BIT_UNSET,
+			secondInterruptEnabled ? BIT_SET : BIT_UNSET,
+			alarmInterruptEnabled ? BIT_SET : BIT_UNSET,
+			correctionInterruptEnabled ? BIT_SET : BIT_UNSET
 		])
 
-		const buffer = Uint8Array.from([ byteValue ])
-		return buffer.buffer
+		return Uint8Array.from([ byteValue ])
 	}
 
-	/** @returns ArrayBuffer  */
+	/**
+	 * @param {Control2Clear} profile
+	 * @returns {I2CBufferSource}
+	 */
 	static encodeControl2(profile) {
 		const {
-			clearCountdownAFlag,
-			clearCountdownBFlag,
-			clearSecondFlag,
-			clearAlarmFlag,
-
-			watchdogInterruptEnabled,
+			watchdogAInterruptEnabled,
 			countdownAInterruptEnabled,
 			countdownBInterruptEnabled,
 		} = profile
 
+		const clearWatchdogAFlag = profile.clearWatchdogAFlag ?? false
+		const clearCountdownAFlag = profile.clearCountdownAFlag ?? false
+		const clearCountdownBFlag = profile.clearCountdownBFlag ?? false
+		const clearSecondFlag = profile.clearSecondFlag ?? false
+		const clearAlarmFlag = profile.clearAlarmFlag ?? false
 
 		const byteValue = BitSmush.smushBits([
-			[6, 1], [5, 1], [4, 1], [3, 1],
+			[7, 1], [6, 1], [5, 1], [4, 1], [3, 1],
 			[2, 1], [1, 1], [0, 1]
 		],
 		[
-			clearCountdownAFlag ? 0 : 1,
-			clearCountdownBFlag ? 0 : 1,
-			clearSecondFlag ? 0 : 1,
-			clearAlarmFlag ? 0 : 1,
+			clearWatchdogAFlag ? BIT_UNSET : BIT_SET,
+			clearCountdownAFlag ? BIT_UNSET : BIT_SET,
+			clearCountdownBFlag ? BIT_UNSET : BIT_SET,
+			clearSecondFlag ? BIT_UNSET : BIT_SET,
+			clearAlarmFlag ? BIT_UNSET : BIT_SET,
 
-			watchdogInterruptEnabled ? 1 : 0,
-			countdownAInterruptEnabled ? 1 : 0,
-			countdownBInterruptEnabled ? 1 : 0,
+			watchdogAInterruptEnabled ? BIT_SET : BIT_UNSET,
+			countdownAInterruptEnabled ? BIT_SET : BIT_UNSET,
+			countdownBInterruptEnabled ? BIT_SET : BIT_UNSET,
 		])
 
-		const buffer = Uint8Array.from([ byteValue ])
-		return buffer.buffer
+		return Uint8Array.from([ byteValue ])
 	}
 
-	/** @returns ArrayBuffer  */
+	/**
+	 * @param {Control3Clear} profile
+	 * @returns {I2CBufferSource}
+	 */
 	static encodeControl3(profile) {
 		const {
 			pmBatteryLowDetectionEnabled,
 			pmSwitchoverEnabled,
 			pmDirectSwitchingEnabled,
 
-			clearBatterSwitchoverFlag,
-
 			batterySwitchoverInterruptEnabled,
-			batteryLowInterruptEnabled,
+			batteryLowInterruptEnabled
 		} = profile
+
+		const clearBatterySwitchoverFlag = profile.clearBatterySwitchoverFlag ?? false
 
 		const powerMode = BitSmush.smushBits([
 			[2, 1], [1, 1], [0, 1]
 		], [
-			pmBatteryLowDetectionEnabled ? 0 : 1,
-			pmSwitchoverEnabled ? 0 : 1,
-			pmDirectSwitchingEnabled ? 1 : 0
+			pmBatteryLowDetectionEnabled ? BIT_UNSET : BIT_SET,
+			pmSwitchoverEnabled ? BIT_UNSET : BIT_SET,
+			pmDirectSwitchingEnabled ? BIT_SET : BIT_UNSET
 		])
 
 		const byteValue = BitSmush.smushBits([
 			[ 7, 3 ], [ 3, 1 ], [2, 1], [ 1, 1 ], [ 0, 1 ]
 		], [
 			powerMode,
-			clearBatterSwitchoverFlag ? 0 : 1,
-			1,
-			batterySwitchoverInterruptEnabled ? 1 : 0,
-			batteryLowInterruptEnabled ? 1 : 0
+			clearBatterySwitchoverFlag ? BIT_UNSET : BIT_SET,
+			BIT_SET, // read-only
+			batterySwitchoverInterruptEnabled ? BIT_SET : BIT_UNSET,
+			batteryLowInterruptEnabled ? BIT_SET : BIT_UNSET
 		])
 
-		const buffer = Uint8Array.from([ byteValue ])
-		return buffer.buffer
+		return Uint8Array.from([ byteValue ])
 	}
 
-	/** @returns ArrayBuffer  */
-	static encodeTime(seconds, minutes, hours, day, month, year, ampm_mode, century) {
+	/**
+	 * @param {CoreTime} time
+	 * @param {boolean} ampm_mode
+	 * @param {number} [century]
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeTime(time, ampm_mode, century = BASE_CENTURY_Y2K) {
+		const { second, minute, hour, day, monthsValue, year } = time
+
 		if(year < 100 && century === undefined) { console.warn('2-digit year / Y2K warning') }
 		const year2digit = year >= 100 ? Math.max(0, year - century) : year
 
-		const OS_MASK = 0x7f
+		const OS_MASK = 0x80
+		const SECONDS_MASK = 0x7F // ~OS_MASK
 
-		const buffer = Uint8Array.from([
-			encodeBCD(seconds & OS_MASK),
-			encodeBCD(minutes),
-			encodeBCD(hours), // TODO encode ampm
+		return Uint8Array.from([
+			encodeBCD(second & SECONDS_MASK),
+			encodeBCD(minute),
+			encodeBCD(hour), // TODO encode ampm
 			encodeBCD(day),
 			encodeBCD(0),  // TODO calculate day of week? or require
-			encodeBCD(month),
+			encodeBCD(monthsValue),
 			encodeBCD(year2digit)
 		])
-
-		return buffer.buffer
 	}
 
-	/** @returns ArrayBuffer  */
+	/** @returns {I2CBufferSource}  */
 	static encodeAlarm() {
 		throw new Error('no implementation')
 	}
 
-	/** @returns ArrayBuffer  */
+	/** @returns {I2CBufferSource}  */
 	static encodeOffset() {
 		throw new Error('no implementation')
 	}

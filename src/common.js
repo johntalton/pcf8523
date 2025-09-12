@@ -1,7 +1,7 @@
 import { I2CAddressedBus } from '@johntalton/and-other-delights'
 import { Converter } from './converter.js'
 
-import { REGISTER, REGISTER_BLOCK } from './register.js'
+import { REGISTER, REGISTER_BLOCK } from './defs.js'
 
 export const RESET_MAGIC_VALUE = 0x58
 
@@ -17,12 +17,16 @@ export class Common {
 	 * @param {I2CAddressedBus} bus
 	 */
 	static async getProfile(bus) {
-		const buffer = await bus.readI2cBlock(REGISTER.CONTROL_1, 3)
+		const buffer = await bus.readI2cBlock(REGISTER_BLOCK.PROFILE.START, REGISTER_BLOCK.PROFILE.LENGTH)
 		if (buffer.byteLength !== 3) { throw new Error('invalid profile length') }
 
-		const control1 = Converter.decodeControl1(new DataView(buffer, 0, 1))
-		const control2 = Converter.decodeControl2(new DataView(buffer, 1, 1))
-		const control3 = Converter.decodeControl3(new DataView(buffer, 2, 1))
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
+
+		const control1 = Converter.decodeControl1(u8.subarray(0))
+		const control2 = Converter.decodeControl2(u8.subarray(1))
+		const control3 = Converter.decodeControl3(u8.subarray(2))
 
 		return {
 			...control1,
@@ -122,7 +126,9 @@ export class Common {
 	/** @param {I2CAddressedBus} bus */
 	static async getTimer(bus) {
 		const buffer = await bus.readI2cBlock(REGISTER_BLOCK.TIMER.START, REGISTER_BLOCK.TIMER.LENGTH)
-		const u8 = new Uint8Array(buffer)
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+			new Uint8Array(buffer)
 
 		return {
 			...Converter.decodeTimerControl(u8.subarray(0, 1)),
