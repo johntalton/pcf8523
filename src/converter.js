@@ -33,23 +33,52 @@ import {
  * } from './defs.js'
  */
 
+/**
+ * @param {number} value
+ * @param {number} tensPos
+ * @param {number} tensLen
+ * @param {number} unitsPos
+ * @param {number} unitsLen
+ */
 export function decodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
 	//return value - 6 * (value >> 4)
 	return 10 * BitSmush.extractBits(value, tensPos, tensLen) +
 		BitSmush.extractBits(value, unitsPos, unitsLen)
 }
 
+/**
+ * @param {number} value
+ * @param {number} tensPos
+ * @param {number} tensLen
+ * @param {number} unitsPos
+ * @param {number} unitsLen
+ */
 export function encodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
 	return value + 6 * Math.floor(value / 10)
 	//const tens = Math.floor(value / 10)
 	// ...
 }
 
+const SEVEN_BIT_MASK = 0b0111_1111
+
+/**
+ * @param {number} value
+ */
 export function decode7BitTwosComplement(value) {
 	const SIGN_MASK = 0b0100_0000
-	const SEVEN_BIT_MASK = 0b0111_1111
+
 	if((value & SIGN_MASK) !== 0) { return -((~value & SEVEN_BIT_MASK) + 1) }
 	return value
+}
+
+/**
+ * @param {number} value
+ */
+export function encode7BitTwosComplement(value) {
+	if(value > 63 || value < -64) { throw new RangeError('value ouf of range') }
+	if(value >= 0) { return value }
+
+	return (~(-value - 1)) & SEVEN_BIT_MASK
 }
 
 /**
@@ -165,14 +194,14 @@ export class Converter {
 		const [ control3 ] = u8
 
 		const powerMode = BitSmush.extractBits(control3, 7, 3)
-		const batterySwitchoverFlag = BitSmush.extractBits(control3, 3, 1) === 1
-		const batteryLowFlag = BitSmush.extractBits(control3, 2, 1) === 1
-		const batterySwitchoverInterruptEnabled = BitSmush.extractBits(control3, 1, 1) === 1
-		const batteryLowInterruptEnabled = BitSmush.extractBits(control3, 0, 1) === 1
+		const batterySwitchoverFlag = BitSmush.extractBits(control3, 3, 1) === BIT_SET
+		const batteryLowFlag = BitSmush.extractBits(control3, 2, 1) === BIT_SET
+		const batterySwitchoverInterruptEnabled = BitSmush.extractBits(control3, 1, 1) === BIT_SET
+		const batteryLowInterruptEnabled = BitSmush.extractBits(control3, 0, 1) === BIT_SET
 
-		const pmBatteryLowDetectionEnabled = !(BitSmush.extractBits(powerMode, 2, 1) === 1)
-		const pmSwitchoverEnabled = !(BitSmush.extractBits(powerMode, 1, 1) === 1)
-		const pmDirectSwitchingEnabled = BitSmush.extractBits(powerMode, 0, 1) === 1
+		const pmBatteryLowDetectionEnabled = !(BitSmush.extractBits(powerMode, 2, 1) === BIT_SET)
+		const pmSwitchoverEnabled = !(BitSmush.extractBits(powerMode, 1, 1) === BIT_SET)
+		const pmDirectSwitchingEnabled = BitSmush.extractBits(powerMode, 0, 1) === BIT_SET
 
 		return {
 			pmBatteryLowDetectionEnabled,
@@ -189,11 +218,11 @@ export class Converter {
 
 	/**
 	 * @param {I2CBufferSource} buffer
-	 * @param {boolean} [ampm_mode = false]
-	 * @param {number} [baseCentury = BASE_CENTURY_Y2K]
+	 * @param {boolean} ampm_mode
+	 * @param {number} century
 	 * @returns {Time}
 	 */
-	static decodeTime(buffer, ampm_mode = false, baseCentury = BASE_CENTURY_Y2K) {
+	static decodeTime(buffer, ampm_mode, century) {
 		const u8 = ArrayBuffer.isView(buffer) ?
 			new Uint8Array(buffer.buffer, buffer.byteOffset, BYTE_LENGTH_TIME) :
 			new Uint8Array(buffer, 0, BYTE_LENGTH_TIME)
@@ -208,19 +237,19 @@ export class Converter {
 			yearsByte
 		] = u8
 
-		const integrity = BitSmush.extractBits(secondsByte, 7, 1) === 0
+		const integrity = BitSmush.extractBits(secondsByte, 7, 1) === BIT_UNSET
 		const second = decodeBCD(secondsByte, 6, 3, 3, 4)
 		const minute = decodeBCD(minutesByte, 6, 3, 3, 4)
 		const hour = ampm_mode ?
 			decodeBCD(hoursByte, 4, 1, 3, 4) :
 			decodeBCD(hoursByte, 5, 2, 3, 4)
-		const pm = ampm_mode ? BitSmush.extractBits(hoursByte, 7, 1) === 1 : undefined
+		const pm = ampm_mode ? BitSmush.extractBits(hoursByte, 7, 1) === BIT_SET : undefined
 		const day = decodeBCD(daysByte, 5, 2, 3, 4)
 		const weekdayValue = BitSmush.extractBits(weekdaysByte, 2, 3)
 		const weekday = WEEKDAYS_MAP[weekdayValue]
 		const monthsValue = decodeBCD(monthsByte, 4, 1, 3, 4)
 		const month = MONTHS_MAP[monthsValue - 1]
-		const year = baseCentury + decodeBCD(yearsByte, 7, 4, 3, 4)
+		const year = century + decodeBCD(yearsByte, 7, 4, 3, 4)
 
 		return {
 			integrity,
@@ -248,7 +277,7 @@ export class Converter {
 
 		const [ byteValue ] = u8
 
-		const minuteEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const minuteEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === BIT_SET)
 		const minute = decodeBCD(byteValue, 6, 3, 3, 4)
 
 		return {
@@ -269,15 +298,16 @@ export class Converter {
 
 		const [ byteValue ] = u8
 
-		const hourEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
-		const pm = ampm_mode ? (BitSmush.extractBits(byteValue, 5, 1) === 1) : undefined
+		const hourEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === BIT_SET)
+		const pm = ampm_mode ? (BitSmush.extractBits(byteValue, 5, 1) === BIT_SET) : undefined
 		const hour = ampm_mode ?
 			decodeBCD(byteValue, 4, 1, 3, 4) :
 			decodeBCD(byteValue, 5, 2, 3, 4)
 
 		return {
 			hourEnabled,
-			hour
+			hour,
+			pm
 		}
 	}
 
@@ -292,7 +322,7 @@ export class Converter {
 
 		const [ byteValue ] = u8
 
-		const dayEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const dayEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === BIT_SET)
 		const day = decodeBCD(byteValue, 5, 2, 3, 4)
 
 		return {
@@ -312,7 +342,7 @@ export class Converter {
 
 		const [ byteValue ] = u8
 
-		const weekdayEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === 1)
+		const weekdayEnabled = !(BitSmush.extractBits(byteValue, 7, 1) === BIT_SET)
 		const weekdayValue = BitSmush.extractBits(byteValue, 2, 3)
 		const weekday = WEEKDAYS_MAP[weekdayValue]
 
@@ -383,11 +413,11 @@ export class Converter {
 
 		const [ byteValue ] = u8
 
-		const interruptAPulsedMode = BitSmush.extractBits(byteValue, 7, 1) === 1
-		const interruptBPulsedMode = BitSmush.extractBits(byteValue, 6, 1) === 1
+		const interruptAPulsedMode = BitSmush.extractBits(byteValue, 7, 1) === BIT_SET
+		const interruptBPulsedMode = BitSmush.extractBits(byteValue, 6, 1) === BIT_SET
 		const clockFrequencyValue = BitSmush.extractBits(byteValue, 5, 3)
 		const timerAControl = BitSmush.extractBits(byteValue, 2, 2)
-		const countdownTimerBEnabled = BitSmush.extractBits(byteValue, 0, 1) === 1
+		const countdownTimerBEnabled = BitSmush.extractBits(byteValue, 0, 1) === BIT_SET
 
 		return {
 			interruptAPulsedMode,
@@ -575,10 +605,10 @@ export class Converter {
 	/**
 	 * @param {CoreTime} time
 	 * @param {boolean} ampm_mode
-	 * @param {number} [century]
+	 * @param {number} century
 	 * @returns {I2CBufferSource}
 	 */
-	static encodeTime(time, ampm_mode, century = BASE_CENTURY_Y2K) {
+	static encodeTime(time, ampm_mode, century) {
 		const { second, minute, hour, day, monthsValue, year } = time
 
 		if(year < 100 && century === undefined) { console.warn('2-digit year / Y2K warning') }
@@ -598,13 +628,108 @@ export class Converter {
 		])
 	}
 
-	/** @returns {I2CBufferSource}  */
-	static encodeAlarm() {
-		throw new Error('no implementation')
+
+	/**
+	 * @param {number} minute
+	 * @param {boolean} enable
+	 * @returns {number}
+	 */
+	static _encodeAlarmMinute(minute, enable) {
+		const enableValue = enable ? BIT_UNSET : BIT_SET
+		const minuteValue = encodeBCD(minute, 6, 3, 3, 4)
+		return BitSmush.smushBits(
+			[ [ 7, 1], [ 6, 7 ] ],
+			[ enableValue, minuteValue ]
+		)
 	}
 
-	/** @returns {I2CBufferSource}  */
-	static encodeOffset() {
-		throw new Error('no implementation')
+	/**
+	 * @param {number} hour
+	 * @param {boolean} ampm_mode
+	 * @param {boolean} enable
+	 * @returns {number}
+	 */
+	static _encodeAlarmHour(hour, ampm_mode, enable) {
+		const enableValue = enable ? BIT_UNSET : BIT_SET
+		// const ampm = ampm_mode ? ampmValue :
+		const hourValue = ampm_mode ?
+			encodeBCD(hour, 4, 1, 3, 4) :
+			encodeBCD(hour, 4, 2, 3, 4)
+
+		return BitSmush.smushBits(
+			[ [ 7, 1], [ 5, 6 ] ],
+			[ enableValue, hourValue ]
+		)
+	}
+
+	/**
+	 * @param {number} day
+	 * @param {boolean} enable
+	 * @returns {number}
+	 */
+	static _encodeAlarmDay(day, enable) {
+		const enableValue = enable ? BIT_UNSET : BIT_SET
+		const dayValue = encodeBCD(day, 5, 2, 3, 4)
+		return BitSmush.smushBits(
+			[ [ 7, 1 ], [ 5, 6 ]],
+			[ enableValue, dayValue ]
+		)
+	}
+
+	/**
+	 * @param {number} weekdayValue
+	 * @param {boolean} enable
+	 * @returns {number}
+	 */
+	static _encodeAlarmWeekday(weekdayValue, enable) {
+		const enableValue = enable ? BIT_UNSET : BIT_SET
+		return BitSmush.smushBits(
+			[ [ 7, 1 ], [ 2, 3 ]],
+			[ enableValue, weekdayValue ]
+		)
+	}
+
+	/**
+	 * @param {Alarm} alarm
+	 * @param {boolean} ampm_mode
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeAlarm(alarm, ampm_mode) {
+		const {
+			minute,
+			hour,
+			day,
+			weekdayValue
+		} = alarm
+
+		const minuteEnabled = alarm.minuteEnabled ?? false
+		const hourEnabled = alarm.hourEnabled ?? false
+		const dayEnabled = alarm.dayEnabled ?? false
+		const weekdayEnabled = alarm.weekdayEnabled ?? false
+
+		const pm = ampm_mode ? alarm.pm : undefined
+
+		return Uint8Array.from([
+			Converter._encodeAlarmMinute(minute, minuteEnabled),
+			Converter._encodeAlarmHour(hour, ampm_mode, hourEnabled),
+			Converter._encodeAlarmDay(day, dayEnabled),
+			Converter._encodeAlarmWeekday(weekdayValue, weekdayEnabled)
+		])
+	}
+
+	/**
+	 * @param {OFFSET_MODE} mode
+	 * @param {number} offsetValue
+	 * @returns {I2CBufferSource}  */
+	static encodeOffset(mode, offsetValue) {
+		const offsetValue7BitTwos = encode7BitTwosComplement(offsetValue)
+
+		const byteValue = BitSmush.smushBits(
+			[ [ 7, 1 ], [ 6, 7 ] ],
+			[
+				mode, offsetValue7BitTwos
+			])
+
+		return Uint8Array.from([ byteValue ])
 	}
 }

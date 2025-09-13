@@ -9,7 +9,10 @@ import {
 	TIMER_CLOCK_FREQUENCY,
 	TIMER_A_CONTROL,
 	TIMER_AB_SOURCE_CLOCK,
-	TIMER_B_PULSE_WIDTH
+	TIMER_B_PULSE_WIDTH,
+	encode7BitTwosComplement,
+	decodeTimeToDate,
+	BASE_CENTURY_Y2K
 } from '@johntalton/pcf8523'
 
 describe('decodeBCD', () => {
@@ -69,6 +72,81 @@ describe('decode7BitTwosComplement', () => {
 		const result = decode7BitTwosComplement(0b0100_0000)
 		assert.equal(result, -64)
 	})
+})
+
+describe('encode7BitTwosComplement', () => {
+	it('should throw if value out of range (positive)', () => {
+		assert.throws(() => encode7BitTwosComplement(64))
+	})
+
+	it('should throw if value out of range (negative)', () => {
+		assert.throws(() => encode7BitTwosComplement(-65))
+	})
+
+	it('should encode 63', () => {
+		const result = encode7BitTwosComplement(63)
+		assert.equal(result, 0b0011_1111)
+	})
+
+	it('should encode 62', () => {
+		const result = encode7BitTwosComplement(62)
+		assert.equal(result, 0b0011_1110)
+	})
+
+	it('should encode 2', () => {
+		const result = encode7BitTwosComplement(2)
+		assert.equal(result, 0b00000010)
+	})
+
+	it('should encode 1', () => {
+		const result = encode7BitTwosComplement(1)
+		assert.equal(result, 0b0000_0001)
+	})
+
+	it('should encode 0', () => {
+		const result = encode7BitTwosComplement(0)
+		assert.equal(result, 0b0000_0000)
+	})
+
+	it('should encode -1', () => {
+		const result = encode7BitTwosComplement(-1)
+		assert.equal(result, 0b0111_1111)
+	})
+
+	it('should encode -2', () => {
+		const result = encode7BitTwosComplement(-2)
+		assert.equal(result, 0b01111110)
+	})
+
+	it('should encode -63', () => {
+		const result = encode7BitTwosComplement(-63)
+		assert.equal(result, 0b0100_0001)
+	})
+
+	it('should encode -64', () => {
+		const result = encode7BitTwosComplement(-64)
+		assert.equal(result, 0b0100_0000)
+	})
+})
+
+describe('decodeTimeToDate', () => {
+	it('should decoder', () => {
+		const date = decodeTimeToDate({
+			year: 2030,
+			monthsValue: 5,
+			day: 5,
+			hour: 2,
+			minute: 30,
+			second: 1
+		})
+
+		assert.deepEqual(date, new Date(Date.UTC(2030, 4, 5, 2, 30, 1)))
+		assert.equal(date.getTime(), 1904178601000)
+	})
+})
+
+describe('encodeTimeFromDate', () => {
+
 })
 
 
@@ -251,12 +329,12 @@ describe('Converter', () => {
 	describe('decodeTime', () => {
 		it('should throw on zero length', () => {
 			const buffer = Uint8Array.from([ ])
-			assert.throws(() => Converter.decodeTime(buffer))
+			assert.throws(() => Converter.decodeTime(buffer, false, BASE_CENTURY_Y2K))
 		})
 
 		it('should throw on short length', () => {
 			const buffer = Uint8Array.from([ 0, 0, 0  ])
-			assert.throws(() => Converter.decodeTime(buffer))
+			assert.throws(() => Converter.decodeTime(buffer, false, BASE_CENTURY_Y2K))
 		})
 
 		it('should decode from zeroed', () => {
@@ -264,7 +342,7 @@ describe('Converter', () => {
 				0, 0, 0, 0, 0, 0, 0
 			])
 
-			const result = Converter.decodeTime(buffer)
+			const result = Converter.decodeTime(buffer, false, BASE_CENTURY_Y2K)
 			assert.deepEqual(result, {
 				integrity: true,
 				second: 0,
@@ -285,7 +363,7 @@ describe('Converter', () => {
 				0, 0, 0, 0, 0, 0, 0
 			])
 
-			const result = Converter.decodeTime(buffer.buffer)
+			const result = Converter.decodeTime(buffer.buffer, false, 900)
 			assert.deepEqual(result, {
 				integrity: true,
 				second: 0,
@@ -297,7 +375,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 0,
 				month: undefined,
-				year: 2000
+				year: 900
 			})
 		})
 
@@ -385,7 +463,7 @@ describe('Converter', () => {
 				0b0000_0101 // May 19, 2005
 			])
 
-			const result = Converter.decodeTime(buffer)
+			const result = Converter.decodeTime(buffer, false, BASE_CENTURY_Y2K)
 			assert.deepEqual(result, {
 				integrity: true,
 				second: 0,
@@ -410,7 +488,7 @@ describe('Converter', () => {
 				0b0001_0110 // December 15, 2016
 			])
 
-			const result = Converter.decodeTime(buffer)
+			const result = Converter.decodeTime(buffer, false, BASE_CENTURY_Y2K)
 			assert.deepEqual(result, {
 				integrity: true,
 				second: 0,
@@ -774,7 +852,14 @@ describe('Converter', () => {
 
 	describe('encodeTime', () => {
 		it('should encode', () => {
-			const ab = Converter.encodeTime(0, 0, 0, 0, 0, 0, false)
+			const ab = Converter.encodeTime({
+				second: 0,
+				minute: 0,
+				hour: 0,
+				day: 0,
+				monthsValue: 0,
+				year: 0
+			}, false, BASE_CENTURY_Y2K)
 			const u8 = ArrayBuffer.isView(ab) ?
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)
@@ -790,17 +875,61 @@ describe('Converter', () => {
 		})
 	})
 
-	// describe('encodeAlarm', () => {
-	// 	it('should', () => {
-	// 		Converter.encodeAlarm()
-	// 	})
-	// })
+	describe('encodeAlarm', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeAlarm({
+				minute: 0, minuteEnabled: false,
+				hour: 0, hourEnabled: false,
+				day: 0, dayEnabled: false,
+				weekdayValue: 0, weekdayEnabled: false
+			}, false)
 
-	// describe('encodeOffset', () => {
-	// 	it('should', () => {
-	// 		Converter.encodeOffset()
-	// 	})
-	// })
+			assert.equal(ab.byteLength, 4)
 
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b1000_0000)
+		})
+	})
+
+	describe('encodeOffset', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeOffset(OFFSET_MODE.ONCE_EVERY_TWO_HOURS, 0)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b0000_0000)
+		})
+
+		it('should encode unique mode', () => {
+			const ab = Converter.encodeOffset(OFFSET_MODE.ONCE_EVERY_MINUTE, 0)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b1000_0000)
+		})
+
+		it('should encode unique mode and value', () => {
+			const ab = Converter.encodeOffset(OFFSET_MODE.ONCE_EVERY_MINUTE, 42)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b1010_1010)
+		})
+
+		it('should encode unique mode and negative value', () => {
+			const ab = Converter.encodeOffset(OFFSET_MODE.ONCE_EVERY_MINUTE, -42)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b1101_0110)
+		})
+	})
 
 })

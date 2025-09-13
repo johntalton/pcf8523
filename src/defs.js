@@ -1,5 +1,9 @@
 
-export const BASE_CENTURY_Y2K = 2000
+/**
+ * @typedef {Object} PCF8523Options
+ * @property {number} [century]
+ * @property {boolean} [ampm_mode]
+ */
 
 /** @enum {string} */
 export const CAP_VALUES = {
@@ -211,6 +215,18 @@ export const TIMER_B_PULSE_WIDTH = {
  */
 
 /**
+ * @typedef  {Object} TimerExtension
+ * @property {number} timerAValue
+ * @property {number} timerBValue
+ */
+
+/**
+ * @typedef {TimerControl & TimerAFrequencyControl & TimerBFrequencyControl & TimerExtension} Timer
+ */
+
+
+
+/**
  * @typedef {Object} AlarmMinute
  * @property {boolean} minuteEnabled
  * @property {number} minute
@@ -233,7 +249,11 @@ export const TIMER_B_PULSE_WIDTH = {
  * @typedef {Object} AlarmWeekday
  * @property {boolean} weekdayEnabled
  * @property {number} weekdayValue
- * @property {WEEKDAYS_MAP} weekday
+ */
+
+/**
+ * @typedef AlarmWeekdayExtended
+* @property {WEEKDAYS_MAP} weekday
  */
 
 /**
@@ -246,6 +266,9 @@ export const OFFSET_LSB_PPM = {
 }
 
 export const DEFAULT_PCF8523_ADDRESS = 0x68
+
+export const RESET_MAGIC_VALUE = 0x58
+export const BASE_CENTURY_Y2K = 2000
 
 export const BIT_SET = 1
 export const BIT_UNSET = 0
