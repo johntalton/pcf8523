@@ -1,12 +1,12 @@
 # pcf8523 (Real Time Clock)
 
-Like many other chips, the PCF8523 packs a range of addition features and flags.
+Feature rich Real Time Clock including Alarm and Timers.
 
-# Usage
 
-Basic mode and usage is around setting and retrieving the clocks time value. This is of extended value when used with the chips Battery circuitry (which need to be enabled to work in "off line" mode).
+[![npm Version](https://img.shields.io/npm/v/@johntalton/pcf8523.svg)](https://www.npmjs.com/package/@johntalton/pcf8523)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/johntalton/pcf8523)
+[![CI](https://github.com/johntalton/pcf8523/actions/workflows/CI.yml/badge.svg)](https://github.com/johntalton/pcf8523/actions/workflows/CI.yml)
 
-Additionally, the chip provides several timers, which can, when enabled, feed the physical interrupt pin(s).  With the addition of several variation and periods, many unique combination of interrupt events can be driven from this single chip.
 
 # Examples
 ## Basic Time
@@ -27,58 +27,38 @@ import {
 
 const bus:I2CBus = /* ... */
 const abus = new I2CAddressedBus(bus, DEFAULT_PCF8523_ADDRESS)
-const device = PCF8523.from(abus)
+const device = new PCF8523(abus)
 
-/*
-... stop oscillator and set power mode
-*/
+// should we store the clock using 24 hour or 12 hour
+const ampm_mode = false // 24-hour
 
+// the chip only stores last 2 digits, using this as the base
+const century = BASE_CENTURY_Y2K
+
+// get some time ...
 const now = new Date(Date.now())
 
-// this shows explicitly conversion of date, could use helper
-// const time = encodeTimeFromDate(now)
-await device.setTime({
-    seconds: now.getUTCSeconds(),
-    minutes: now.getUTCMinutes(),
-    hours: now.getUTCHours(),
-
-    day: now.getUTCDate(),
-    month: now.getUTCMonth() + 1,
-    year4digit: now.getUTCFullYear()
-  },
-  ampm_mode: false,
-  century: BASE_CENTURY_Y2K
-)
-
-/*
-... start oscillator
-*/
+// the time can be manually constructed, here we use a helper
+const time = encodeTimeFromDate(now)
+await device.setTime(time, ampm_mode, century)
 ```
 
 ## Update Control 1 Register (Stop Oscillator)
 
 ```typescript
-const device = PCF8523.from(/* ... see basic example */)
+const device = new PCF8523(/* ... see basic example */)
 
-/* note:
-  these two calls are likely not transaction on the underlying
-  bus implementation this can be of particular interest for Worker threads
-  and when using async with multiple devices, or clients controlling
-  the same device (even when a single event-loop)
-
-  however, this works for 99% of people 🤷🏻‍♂️
-  */
+// fetch current control and then set with override value
 const current = await device.getControl1()
 await device.setControl1({
   ...current,
   stop: true
 })
-
 ```
 
 ## Setting Power Mode
 ```typescript
-const device = PCF8523.from(/* ... see basic example */)
+const device = new PCF8523(/* ... see basic example */)
 
 await device.setControl3({
   // enable power switchover mode (this enable fallback to battery)
@@ -99,13 +79,17 @@ await device.setControl3({
 
 # Interrupts
 
-As per the datasheet this is the list of all things that can be enabled and generate an interrupt(1):
-- Second timer
+Support for multiple types of interrupts are supported.  Note that this is independent of the Flags set (control 2 and 3).  While multiple flags can be set, the chip has the ability to optionally expose those to the INT pin.
+
+The Clock need to be disabled for interrupt pin to be valid.
+
+The Second interrupt Flag will also only be enabled when the interrupt itself is enabled.
+
 - Timer A
 - Timer B
 - Alarm
+- Second timer
 - Battery switch-over
 - Battery low detection
 - Clock offset correction pulse
 
-The second interrupt (for chips that have that pin) can be generated only from Timer B
