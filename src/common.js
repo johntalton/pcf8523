@@ -19,11 +19,8 @@ import {
  *  TimerAFrequencyControl,
  *  TimerBFrequencyControl,
  *  Timer,
- *  AlarmMinute,
- *  AlarmHour,
- *  AlarmDay,
- *  AlarmWeekday,
  *  Alarm,
+ *  AlarmMinute, AlarmHour, AlarmDay, AlarmWeekday,
  *  OFFSET_MODE
  * } from './defs.js'
  */
@@ -157,6 +154,44 @@ export class Common {
 
 	/**
 	 * @param {I2CAddressedBus} bus
+	 * @param {AlarmMinute} profile
+	 */
+	static async setAlarmMinute(bus, profile) {
+		const buffer = Converter.encodeAlarmMinute(profile)
+		await bus.writeI2cBlock(REGISTER.MINUTE_ALARM, buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 * @param {AlarmHour} profile
+	 * @param {boolean} ampm_mode
+	 */
+	static async setAlarmHour(bus, profile, ampm_mode) {
+		const buffer = Converter.encodeAlarmHour(profile, ampm_mode)
+		await bus.writeI2cBlock(REGISTER.HOUR_ALARM, buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 * @param {AlarmDay} profile
+	 */
+	static async setAlarmDay(bus, profile) {
+		const buffer = Converter.encodeAlarmDay(profile)
+		await bus.writeI2cBlock(REGISTER.DAY_ALARM, buffer)
+	}
+
+	/**
+	 * @param {I2CAddressedBus} bus
+	 * @param {AlarmWeekday} profile
+	 */
+	static async setAlarmWeekday(bus, profile) {
+		const buffer = Converter.encodeAlarmWeekday(profile)
+		await bus.writeI2cBlock(REGISTER.WEEKDAY_ALARM, buffer)
+	}
+
+
+	/**
+	 * @param {I2CAddressedBus} bus
 	 * @returns {Promise<Offset>}
 	 */
 	static async getOffset(bus) {
@@ -243,7 +278,8 @@ export class Common {
 	 * @param {TimerControl} profile
 	 */
 	static async setTimerControl(bus, profile) {
-		throw new Error('not implemented')
+		const buffer = Converter.encodeTimerControl(profile)
+		await bus.writeI2cBlock(REGISTER.TIMER_CLOCK_OUT_CONTROL, buffer)
 	}
 
 	/**

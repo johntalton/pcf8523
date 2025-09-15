@@ -114,11 +114,14 @@ export function encodeTimeFromDate(date) {
 	const monthsValue = date.getUTCMonth() + 1
 	const year4digit = date.getUTCFullYear()
 
+	const weekdayValue = date.getUTCDay()
+
 	return {
 		second,
 		minute,
 		hour,
 		day,
+		weekdayValue,
 		monthsValue,
 		year4digit
 	}
@@ -616,7 +619,7 @@ export class Converter {
 	 * @returns {I2CBufferSource}
 	 */
 	static encodeTime(time, ampm_mode, century) {
-		const { second, minute, hour, day, monthsValue, year4digit } = time
+		const { second, minute, hour, day, weekdayValue, monthsValue, year4digit } = time
 
 		if(year4digit < 1000) { console.warn('year less then 4 digits') }
 		const year2digit = year4digit - century
@@ -625,8 +628,6 @@ export class Converter {
 
 		const OS_MASK = 0x80
 		const SECONDS_MASK = 0x7F // ~OS_MASK
-
-		const weekdayValue = 0  // TODO calculate day of week? or require
 
 		return Uint8Array.from([
 			encodeBCD(second & SECONDS_MASK, 6, 3, 3, 4),
@@ -657,6 +658,16 @@ export class Converter {
 	}
 
 	/**
+	 * @param {AlarmMinute} profile
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeAlarmMinute(profile) {
+		const { minute, minuteEnabled } = profile
+		const value = Converter._encodeAlarmMinute(minute, minuteEnabled)
+		return Uint8Array.from([ value ])
+	}
+
+	/**
 	 * @param {number} hour
 	 * @param {boolean} ampm_mode
 	 * @param {boolean} enable
@@ -667,12 +678,23 @@ export class Converter {
 		// const ampm = ampm_mode ? ampmValue :
 		const hourValue = ampm_mode ?
 			encodeBCD(hour, 4, 1, 3, 4) :
-			encodeBCD(hour, 4, 2, 3, 4)
+			encodeBCD(hour, 5, 2, 3, 4)
 
 		return BitSmush.smushBits(
 			[ [ 7, 1], [ 5, 6 ] ],
 			[ enableValue, hourValue ]
 		)
+	}
+
+	/**
+	 * @param {AlarmHour} profile
+	 * @param {boolean} ampm_mode
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeAlarmHour(profile, ampm_mode) {
+		const { hour, hourEnabled } = profile
+		const value = Converter._encodeAlarmHour(hour, ampm_mode, hourEnabled)
+		return Uint8Array.from([ value ])
 	}
 
 	/**
@@ -690,6 +712,16 @@ export class Converter {
 	}
 
 	/**
+	 * @param {AlarmDay} profile
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeAlarmDay(profile) {
+		const { day, dayEnabled } = profile
+		const value = Converter._encodeAlarmDay(day, dayEnabled)
+		return Uint8Array.from([ value ])
+	}
+
+	/**
 	 * @param {number} weekdayValue
 	 * @param {boolean} enable
 	 * @returns {number}
@@ -700,6 +732,16 @@ export class Converter {
 			[ [ 7, 1 ], [ 2, 3 ]],
 			[ enableValue, weekdayValue ]
 		)
+	}
+
+	/**
+	 * @param {AlarmWeekday} profile
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeAlarmWeekday(profile) {
+		const { weekdayValue, weekdayEnabled } = profile
+		const value = Converter._encodeAlarmWeekday(weekdayValue, weekdayEnabled)
+		return Uint8Array.from([ value ])
 	}
 
 	/**
@@ -807,6 +849,8 @@ export class Converter {
 	 * @returns {I2CBufferSource}
 	 */
 	static encodeTimerAValue(value) {
+		if(value > 255) { throw new RangeError('value greater then max') }
+		if(value < 0) { throw new RangeError('value is negative') }
 		return Uint8Array.from([ value ])
 	}
 
@@ -815,6 +859,8 @@ export class Converter {
 	 * @returns {I2CBufferSource}
 	 */
 	static encodeTimerBValue(value) {
+		if(value > 255) { throw new RangeError('value greater then max') }
+		if(value < 0) { throw new RangeError('value is negative') }
 		return Uint8Array.from([ value ])
 	}
 }

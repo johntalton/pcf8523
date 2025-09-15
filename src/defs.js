@@ -167,6 +167,7 @@ export const TIMER_B_PULSE_WIDTH = {
  * @property {number} minute
  * @property {number} hour
  * @property {number} day
+ * @property {number} weekdayValue
  * @property {number} monthsValue
  * @property {number} year4digit
  */

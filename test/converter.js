@@ -12,8 +12,15 @@ import {
 	TIMER_B_PULSE_WIDTH,
 	encode7BitTwosComplement,
 	decodeTimeToDate,
-	BASE_CENTURY_Y2K
+	BASE_CENTURY_Y2K,
+	encodeTimeFromDate,
+	encodeBCD
 } from '@johntalton/pcf8523'
+
+const encodeBCD_63_34 = value => encodeBCD(value, 6,3, 3,4)
+const encodeBCD_41_34 = value => encodeBCD(value, 4,1, 3,4)
+const encodeBCD_52_34 = value => encodeBCD(value, 5,2, 3,4)
+const encodeBCD_74_34 = value => encodeBCD(value, 7,4, 3,4)
 
 describe('decodeBCD', () => {
 	it('should decode', () => {
@@ -22,8 +29,36 @@ describe('decodeBCD', () => {
 })
 
 describe('encodeBCD', () => {
-	it('should encode', () => {
+	// 6, 3, 3, 4  seconds / minutes
+	describe('6,3, 3,4', () => {
+		it('should encode 12 ', () => {
+			const value = encodeBCD_63_34(12)
+			assert.equal(value, 0b0001_0010)
+		})
+	})
 
+	// 4, 1, 3, 4  hour
+	describe('4,1, 3,4', () => {
+		it('should encode 12 ', () => {
+			const value = encodeBCD_41_34(12)
+			assert.equal(value, 0b0001_0010)
+		})
+	})
+
+	// 5, 2, 3, 4  hour / day
+	describe('5,2, 3,4', () => {
+		it('should encode 12 ', () => {
+			const value = encodeBCD_52_34(12)
+			assert.equal(value, 0b0001_0010)
+		})
+	})
+
+	// 7, 4, 3, 4  year
+	describe('7,4, 3,4', () => {
+		it('should encode 12 ', () => {
+			const value = encodeBCD_74_34(12)
+			assert.equal(value, 0b0001_0010)
+		})
 	})
 })
 
@@ -146,7 +181,20 @@ describe('decodeTimeToDate', () => {
 })
 
 describe('encodeTimeFromDate', () => {
+	it('should encode', () => {
+		const date = new Date(Date.UTC(2525, 9, 31, 0, 0, 42))
+		const time = encodeTimeFromDate(date)
 
+		assert.deepEqual(time, {
+			second: 42,
+			minute: 0,
+			hour: 0,
+			day: 31,
+			weekdayValue: 3,
+			monthsValue: 10,
+			year4digit: 2525
+		})
+	})
 })
 
 
@@ -932,4 +980,128 @@ describe('Converter', () => {
 		})
 	})
 
+	describe('encodeTimerControl', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeTimerControl({
+				interruptAPulsedMode: false,
+				interruptBPulsedMode: false,
+				clockFrequencyValue: TIMER_CLOCK_FREQUENCY.FREQUENCY_32768,
+				timerAControl: TIMER_A_CONTROL.DISABLED,
+				countdownTimerBEnabled: false
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b0000_0000)
+		})
+
+		it('should encode unique value', () => {
+			const ab = Converter.encodeTimerControl({
+				interruptAPulsedMode: true,
+				interruptBPulsedMode: false,
+				clockFrequencyValue: TIMER_CLOCK_FREQUENCY.FREQUENCY_32768,
+				timerAControl: TIMER_A_CONTROL.WATCHDOG,
+				countdownTimerBEnabled: true
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b1000_0101)
+		})
+	})
+
+	describe('encodeTimerAControl', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeTimerAControl({
+				sourceClock: TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600_HZ
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b0000_0111)
+		})
+
+		it('should encode', () => {
+			const ab = Converter.encodeTimerAControl({
+				sourceClock: TIMER_AB_SOURCE_CLOCK.SOURCE_64_HZ
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b0000_0001)
+		})
+	})
+
+	describe('encodeTimerBControl', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeTimerBControl({
+				sourceClock: TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600_HZ,
+				pulseWidth: TIMER_B_PULSE_WIDTH.WIDTH_46_875_MS
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b0000_0111)
+		})
+
+		it('should encode unique value', () => {
+			const ab = Converter.encodeTimerBControl({
+				sourceClock: TIMER_AB_SOURCE_CLOCK.SOURCE_1_HZ,
+				pulseWidth: TIMER_B_PULSE_WIDTH.WIDTH_156_25_MS
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0b0101_0010)
+		})
+	})
+
+	describe('encodeTimerAValue', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeTimerAValue(0)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0)
+		})
+
+		it('should encode unique value', () => {
+			const ab = Converter.encodeTimerAValue(42)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 42)
+		})
+	})
+
+	describe('encodeTimerBValue', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeTimerBValue(0)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 0)
+		})
+
+		it('should encode unique value', () => {
+			const ab = Converter.encodeTimerBValue(77)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(u8[0], 77)
+		})
+	})
+
 })
+
+

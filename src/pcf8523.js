@@ -10,8 +10,12 @@ import { BASE_CENTURY_Y2K } from './defs.js'
  *  Control1,
  *  Control2Clear,
  *  Control3Clear,
- *  CoreTime, Time,
+ *  CoreTime,
  *  Alarm,
+ *  AlarmMinute,
+ *  AlarmHour,
+ *  AlarmDay,
+ *  AlarmWeekday,
  *  TimerControl,
  *  TimerAFrequencyControl,
  *  TimerBFrequencyControl,
@@ -112,6 +116,35 @@ export class PCF8523 {
 	 */
 	async setAlarm(profile, ampm_mode = undefined) {
 		return Common.setAlarm(this.#bus, profile, ampm_mode ?? this.#ampm_mode)
+	}
+
+	/**
+	 * @param {AlarmMinute} profile
+	 */
+	async setAlarmMinute(profile) {
+		return Common.setAlarmMinute(this.#bus, profile)
+	}
+
+	/**
+	 * @param {AlarmHour} profile
+	 * @param {boolean} [ampm_mode]
+	 */
+	async setAlarmHour(profile, ampm_mode = undefined) {
+		return Common.setAlarmHour(this.#bus, profile, ampm_mode ?? this.#ampm_mode)
+	}
+
+	/**
+	 * @param {AlarmDay} profile
+	 */
+	async setAlarmDay(profile) {
+		return Common.setAlarmDay(this.#bus, profile)
+	}
+
+	/**
+	 * @param {AlarmWeekday} profile
+	 */
+	async setAlarmWeekday(profile) {
+		return Common.setAlarmWeekday(this.#bus, profile)
 	}
 
 	async getOffset() {
