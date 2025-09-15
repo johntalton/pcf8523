@@ -5,13 +5,17 @@
  * @property {boolean} [ampm_mode]
  */
 
-/** @enum {string} */
-export const CAP_VALUES = {
-	SEVEN: '7pF',
-	TWELVE: '12.5pF'
-}
+export const CAP_MAP = [
+	'7pF',
+	'12.5pF'
+]
 
 /** @enum {string} */
+export const CAP_VALUES = {
+	SEVEN: CAP_MAP[0],
+	TWELVE: CAP_MAP[1]
+}
+
 export const WEEKDAYS_MAP = [
 	'Sunday',
 	'Monday',
@@ -22,7 +26,6 @@ export const WEEKDAYS_MAP = [
 	'Saturday',
 ]
 
-/** @enum {string} */
 export const MONTHS_MAP = [
 	'January',
 	'February',
@@ -145,7 +148,7 @@ export const TIMER_B_PULSE_WIDTH = {
  * @typedef {Object} Control3Enablement
  * @property {boolean} pmBatteryLowDetectionEnabled
  * @property {boolean} pmSwitchoverEnabled
- * @property {boolean} pmDirectSwitchingEnabled
+ * @property {boolean} [pmDirectSwitchingEnabled]
  * @property {boolean} batterySwitchoverInterruptEnabled
  * @property {boolean} batteryLowInterruptEnabled
  */
@@ -165,27 +168,21 @@ export const TIMER_B_PULSE_WIDTH = {
  * @property {number} hour
  * @property {number} day
  * @property {number} monthsValue
- * @property {number} year
+ * @property {number} year4digit
  */
 
 /**
  * @typedef {Object} TimeExtended
  * @property {boolean} integrity
  * @property {boolean} [pm]
- * @property {WEEKDAYS_MAP} weekday
+ * @property {string} weekday
  * @property {number} weekdayValue
- * @property {MONTHS_MAP} month
+ * @property {string} month
 */
 
 /**
  * @typedef {CoreTime & TimeExtended} Time
  */
-
-
-
-
-
-
 
 /**
  * @typedef {Object} Offset
@@ -301,7 +298,7 @@ export const REGISTER = {
 	// Offset register
 	OFFSET: 0x0E,
 
-	// CLOCKOUT and timer registers
+	// Clock Out and timer registers
 	TIMER_CLOCK_OUT_CONTROL: 0x0F,
 	TIMER_A_FREQ_CONTROL: 0x10,
 	TIMER_A_REG: 0x11,

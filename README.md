@@ -35,15 +35,17 @@ const device = PCF8523.from(abus)
 
 const now = new Date(Date.now())
 
-await device.setTime(
-  seconds: now.getUTCSeconds(),
-  minutes: now.getUTCMinutes(),
-  hours: now.getUTCHours(),
+// this shows explicitly conversion of date, could use helper
+// const time = encodeTimeFromDate(now)
+await device.setTime({
+    seconds: now.getUTCSeconds(),
+    minutes: now.getUTCMinutes(),
+    hours: now.getUTCHours(),
 
-  day: now.getUTCDate(),
-  month: now.getUTCMonth() + 1,
-  year: now.getUTCFullYear() - BASE_CENTURY_Y2K,
-
+    day: now.getUTCDate(),
+    month: now.getUTCMonth() + 1,
+    year4digit: now.getUTCFullYear()
+  },
   ampm_mode: false,
   century: BASE_CENTURY_Y2K
 )

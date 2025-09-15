@@ -132,7 +132,7 @@ describe('encode7BitTwosComplement', () => {
 describe('decodeTimeToDate', () => {
 	it('should decoder', () => {
 		const date = decodeTimeToDate({
-			year: 2030,
+			year4digit: 2030,
 			monthsValue: 5,
 			day: 5,
 			hour: 2,
@@ -299,7 +299,7 @@ describe('Converter', () => {
 			assert.deepEqual(result, {
 				pmBatteryLowDetectionEnabled: true,
 				pmSwitchoverEnabled: false,
-				pmDirectSwitchingEnabled: true,
+				pmDirectSwitchingEnabled: undefined,
 
 				batterySwitchoverInterruptEnabled: false,
 				batteryLowInterruptEnabled: true,
@@ -315,7 +315,7 @@ describe('Converter', () => {
 			assert.deepEqual(result, {
 				pmBatteryLowDetectionEnabled: true,
 				pmSwitchoverEnabled: false,
-				pmDirectSwitchingEnabled: false,
+				pmDirectSwitchingEnabled: undefined,
 
 				batterySwitchoverInterruptEnabled: false,
 				batteryLowInterruptEnabled: false,
@@ -354,7 +354,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 0,
 				month: undefined,
-				year: 2000
+				year4digit: 2000
 			})
 		})
 
@@ -375,7 +375,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 0,
 				month: undefined,
-				year: 900
+				year4digit: 900
 			})
 		})
 
@@ -400,7 +400,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 5,
 				month: 'May',
-				year: 1977
+				year4digit: 1977
 			})
 		})
 
@@ -425,7 +425,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 5,
 				month: 'May',
-				year: 1980
+				year4digit: 1980
 			})
 		})
 
@@ -450,7 +450,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 5,
 				month: 'May',
-				year: 1999
+				year4digit: 1999
 			})
 		})
 
@@ -475,7 +475,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 5,
 				month: 'May',
-				year: 2005
+				year4digit: 2005
 			})
 		})
 
@@ -500,7 +500,7 @@ describe('Converter', () => {
 				weekday: 'Sunday',
 				monthsValue: 12,
 				month: 'December',
-				year: 2016
+				year4digit: 2016
 			})
 		})
 	})
@@ -858,8 +858,8 @@ describe('Converter', () => {
 				hour: 0,
 				day: 0,
 				monthsValue: 0,
-				year: 0
-			}, false, BASE_CENTURY_Y2K)
+				year4digit: 0
+			}, false, 0)
 			const u8 = ArrayBuffer.isView(ab) ?
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)

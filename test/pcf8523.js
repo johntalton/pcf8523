@@ -1,11 +1,15 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { OFFSET_MODE, PCF8523, REGISTER, TIMER_A_CONTROL, TIMER_AB_SOURCE_CLOCK, TIMER_B_PULSE_WIDTH  } from '@johntalton/pcf8523'
+import { BASE_CENTURY_Y2K, OFFSET_MODE, PCF8523, REGISTER, TIMER_A_CONTROL, TIMER_AB_SOURCE_CLOCK, TIMER_B_PULSE_WIDTH  } from '@johntalton/pcf8523'
 
 /** @import { I2CAddressedBus } from '@johntalton/and-other-delights' */
 
-/** @returns {I2CAddressedBus} */
+/**
+ * @template T
+ * @param {ArrayBufferLike|ArrayBufferView} [readBuffer]
+ * @returns {T extends I2CAddressedBus}
+ * */
 function mockABus(readBuffer) {
   return {
     readList: [],
@@ -53,12 +57,11 @@ const DEFAULT_CONTROL_3 = {
   batteryLowInterruptEnabled: false,
   batterySwitchoverFlag: false,
   batterySwitchoverInterruptEnabled: false,
+
   pmBatteryLowDetectionEnabled: true,
   pmDirectSwitchingEnabled: false,
   pmSwitchoverEnabled: true
 }
-
-
 
 describe('PCF8523', () => {
 
@@ -136,7 +139,7 @@ describe('PCF8523', () => {
       weekday: 'Sunday',
       monthsValue: 0,
       month: undefined,
-      year: 2000
+      year4digit: 2000
     })
   })
 
@@ -235,4 +238,236 @@ describe('PCF8523', () => {
     const result = await device.getTimerBValue()
     assert.equal(result, 0)
   })
+
+
+  //
+  //
+  //
+
+  it('should set Control1', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setControl1({
+      capacitorSelection: '7pF',
+			stop: false,
+			ampm: false,
+			secondInterruptEnabled: false,
+			alarmInterruptEnabled:  false,
+			correctionInterruptEnabled: false
+    })
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 1)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b0000_0000)
+  })
+
+	it('should set Control1 to unique value', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setControl1({
+      capacitorSelection: '12.5pF',
+			stop: false,
+			ampm: true,
+			secondInterruptEnabled: false,
+			alarmInterruptEnabled:  true,
+			correctionInterruptEnabled: false
+    })
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 1)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b1000_1010)
+  })
+
+	it('should set Control2', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setControl2({
+			clearWatchdogAFlag: false,
+			clearCountdownAFlag: false,
+			clearCountdownBFlag: false,
+			clearAlarmFlag: false,
+			clearSecondFlag: false,
+
+			watchdogAInterruptEnabled: false,
+			countdownAInterruptEnabled: false,
+			countdownBInterruptEnabled: false
+    })
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 1)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b1111_1000)
+  })
+
+	it('should set Control2 to unique value', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setControl2({
+			clearWatchdogAFlag: false,
+			clearCountdownAFlag: true,
+			clearCountdownBFlag: false,
+			clearAlarmFlag: false,
+			clearSecondFlag: false,
+
+			watchdogAInterruptEnabled: true,
+			countdownAInterruptEnabled: true,
+			countdownBInterruptEnabled: false
+    })
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 1)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b1011_1110)
+  })
+
+	it('should set Control3', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setControl3({
+			pmSwitchoverEnabled: false,
+			pmDirectSwitchingEnabled: true,
+			pmBatteryLowDetectionEnabled: false,
+
+			clearBatterySwitchoverFlag: false,
+
+			batterySwitchoverInterruptEnabled: false,
+    	batteryLowInterruptEnabled: false
+    })
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 1)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b1110_1100)
+  })
+
+	it('should set Control3 to unique value', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setControl3({
+			pmSwitchoverEnabled: true,
+			pmDirectSwitchingEnabled: false,
+			pmBatteryLowDetectionEnabled: false,
+
+			clearBatterySwitchoverFlag: true,
+
+			batterySwitchoverInterruptEnabled: false,
+			batteryLowInterruptEnabled: true
+    })
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 1)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b1000_0101)
+  })
+
+	it('should set Time', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setTime({
+			second: 0,
+			minute: 0,
+			hour: 0,
+			day: 0,
+			monthsValue: 0,
+			year4digit: 2000
+		}, false, BASE_CENTURY_Y2K)
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 7)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b0000_0000)
+		assert.equal(u8[1], 0b0000_0000)
+		assert.equal(u8[2], 0b0000_0000)
+		assert.equal(u8[3], 0b0000_0000)
+		assert.equal(u8[4], 0b0000_0000)
+		assert.equal(u8[5], 0b0000_0000)
+		assert.equal(u8[6], 0b0000_0000)
+	})
+
+	it('should reject if Time century negative', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await assert.rejects(() => device.setTime({
+			second: 0,
+			minute: 0,
+			hour: 0,
+			day: 0,
+			monthsValue: 0,
+			year4digit: 2000
+		}, false, 1900))
+	})
+
+	it('should reject if Time century positive', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await assert.rejects(() => device.setTime({
+			second: 0,
+			minute: 0,
+			hour: 0,
+			day: 0,
+			monthsValue: 0,
+			year4digit: 2000
+		}, false, 2100))
+	})
+
+
+	it('should set Time to unique value', async () => {
+    const bus = mockABus()
+    const device = new PCF8523(bus)
+
+    await device.setTime({
+			second: 42,
+			minute: 1,
+			hour: 13,
+			day: 30,
+			monthsValue: 0,
+			year4digit: 2099
+		}, false, BASE_CENTURY_Y2K)
+
+		assert.equal(bus.writeList.length, 1)
+		assert.equal(bus.writeList[0].length, 7)
+		const u8 = ArrayBuffer.isView(bus.writeList[0].buffer) ?
+			new Uint8Array(bus.writeList[0].buffer.buffer) :
+			new Uint8Array(bus.writeList[0].buffer)
+
+		assert.equal(u8[0], 0b0100_0010)
+		assert.equal(u8[1], 0b0000_0001)
+		assert.equal(u8[2], 0b0001_0011)
+		assert.equal(u8[3], 0b0011_0000)
+		assert.equal(u8[4], 0b0000_0000)
+		assert.equal(u8[5], 0b0000_0000)
+		assert.equal(u8[6], 0b1001_1001)
+	})
 })

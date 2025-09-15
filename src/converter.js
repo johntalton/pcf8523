@@ -7,6 +7,7 @@ import {
 	BYTE_LENGTH_ALARM,
 	BYTE_LENGTH_ONE,
 	BYTE_LENGTH_TIME,
+	CAP_MAP,
 	CAP_VALUES,
 	MONTHS_MAP,
 	OFFSET_LSB_PPM,
@@ -54,9 +55,13 @@ export function decodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
  * @param {number} unitsLen
  */
 export function encodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
-	return value + 6 * Math.floor(value / 10)
-	//const tens = Math.floor(value / 10)
-	// ...
+	// return value + 6 * Math.floor(value / 10)
+	const tens = Math.floor(value / 10)
+	const units = value - (tens * 10)
+
+	return BitSmush.smushBits(
+		[ [ tensPos, tensLen ], [ unitsPos, unitsLen] ],
+		[ tens, units ])
 }
 
 const SEVEN_BIT_MASK = 0b0111_1111
@@ -86,10 +91,10 @@ export function encode7BitTwosComplement(value) {
  * @returns {Date}
  */
 export function decodeTimeToDate(time) {
-	const { year, monthsValue, day, hour, minute, second } = time
+	const { year4digit, monthsValue, day, hour, minute, second } = time
 
 	return new Date(Date.UTC(
-		year,
+		year4digit,
 		monthsValue - 1,
 		day,
 		hour, minute, second))
@@ -98,17 +103,16 @@ export function decodeTimeToDate(time) {
 
 /**
  * @param {Date} date
- * @param {number} century
  * @returns {CoreTime}
  */
-export function encodeTimeFromDate(date, century) {
+export function encodeTimeFromDate(date) {
 	const second = date.getUTCSeconds()
 	const minute = date.getUTCMinutes()
 	const hour = date.getUTCHours()
 
 	const day = date.getUTCDate()
 	const monthsValue = date.getUTCMonth() + 1
-	const year = date.getUTCFullYear() - century
+	const year4digit = date.getUTCFullYear()
 
 	return {
 		second,
@@ -116,7 +120,7 @@ export function encodeTimeFromDate(date, century) {
 		hour,
 		day,
 		monthsValue,
-		year
+		year4digit
 	}
 }
 
@@ -201,7 +205,7 @@ export class Converter {
 
 		const pmBatteryLowDetectionEnabled = !(BitSmush.extractBits(powerMode, 2, 1) === BIT_SET)
 		const pmSwitchoverEnabled = !(BitSmush.extractBits(powerMode, 1, 1) === BIT_SET)
-		const pmDirectSwitchingEnabled = BitSmush.extractBits(powerMode, 0, 1) === BIT_SET
+		const pmDirectSwitchingEnabled = pmSwitchoverEnabled ? BitSmush.extractBits(powerMode, 0, 1) === BIT_SET : undefined
 
 		return {
 			pmBatteryLowDetectionEnabled,
@@ -249,7 +253,9 @@ export class Converter {
 		const weekday = WEEKDAYS_MAP[weekdayValue]
 		const monthsValue = decodeBCD(monthsByte, 4, 1, 3, 4)
 		const month = MONTHS_MAP[monthsValue - 1]
-		const year = century + decodeBCD(yearsByte, 7, 4, 3, 4)
+		const year2digit = decodeBCD(yearsByte, 7, 4, 3, 4)
+		const year4digit = century + year2digit
+
 
 		return {
 			integrity,
@@ -262,7 +268,7 @@ export class Converter {
 			weekday,
 			monthsValue,
 			month,
-			year
+			year4digit
 		}
 	}
 
@@ -513,6 +519,7 @@ export class Converter {
 			correctionInterruptEnabled
 		} = profile
 
+		if(!CAP_MAP.includes(capacitorSelection)) { throw new Error('invalid capacitor selection') }
 		const capSelRaw = capacitorSelection === CAP_VALUES.TWELVE ? BIT_SET : BIT_UNSET
 
 		const byteValue = BitSmush.smushBits([
@@ -609,22 +616,28 @@ export class Converter {
 	 * @returns {I2CBufferSource}
 	 */
 	static encodeTime(time, ampm_mode, century) {
-		const { second, minute, hour, day, monthsValue, year } = time
+		const { second, minute, hour, day, monthsValue, year4digit } = time
 
-		if(year < 100 && century === undefined) { console.warn('2-digit year / Y2K warning') }
-		const year2digit = year >= 100 ? Math.max(0, year - century) : year
+		if(year4digit < 1000) { console.warn('year less then 4 digits') }
+		const year2digit = year4digit - century
+		if(year2digit < 0) { throw new RangeError('year not in century (after)') }
+		if(year2digit >= 100) { throw new RangeError('year not in century (before)') }
 
 		const OS_MASK = 0x80
 		const SECONDS_MASK = 0x7F // ~OS_MASK
 
+		const weekdayValue = 0  // TODO calculate day of week? or require
+
 		return Uint8Array.from([
-			encodeBCD(second & SECONDS_MASK),
-			encodeBCD(minute),
-			encodeBCD(hour), // TODO encode ampm
-			encodeBCD(day),
-			encodeBCD(0),  // TODO calculate day of week? or require
-			encodeBCD(monthsValue),
-			encodeBCD(year2digit)
+			encodeBCD(second & SECONDS_MASK, 6, 3, 3, 4),
+			encodeBCD(minute, 6, 3, 3, 4),
+			ampm_mode ?
+				encodeBCD(hour, 4, 1, 3, 4) :
+				encodeBCD(hour, 5, 2, 3, 4),
+			encodeBCD(day, 5, 2, 3, 4),
+			weekdayValue,
+			encodeBCD(monthsValue, 4, 1, 3, 4),
+			encodeBCD(year2digit, 7, 4, 3, 4)
 		])
 	}
 
@@ -731,5 +744,77 @@ export class Converter {
 			])
 
 		return Uint8Array.from([ byteValue ])
+	}
+
+	/**
+	 * @param {TimerControl} profile
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeTimerControl(profile) {
+		const {
+			interruptAPulsedMode,
+			interruptBPulsedMode,
+			clockFrequencyValue,
+			timerAControl,
+			countdownTimerBEnabled
+		} = profile
+
+		const byteValue = BitSmush.smushBits(
+			[ [ 7, 1], [ 6, 1], [ 5, 3 ], [ 2, 2 ], [ 0, 1 ] ],
+			[
+				interruptAPulsedMode ? BIT_SET : BIT_UNSET,
+				interruptBPulsedMode ? BIT_SET : BIT_UNSET,
+				clockFrequencyValue,
+				timerAControl,
+				countdownTimerBEnabled ? BIT_SET : BIT_UNSET
+			]
+		)
+
+		return Uint8Array.from([ byteValue ])
+	}
+
+
+	/**
+	 * @param {TimerAFrequencyControl} profile
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeTimerAControl(profile) {
+		const { sourceClock } = profile
+
+		const byteValue = BitSmush.smushBits(
+			[ [ 2, 3 ] ],
+			[ sourceClock ])
+
+		return Uint8Array.from([ byteValue ])
+	}
+
+	/**
+	 * @param {TimerBFrequencyControl} profile
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeTimerBControl(profile) {
+		const { sourceClock, pulseWidth } = profile
+
+		const byteValue = BitSmush.smushBits(
+			[ [ 6, 3 ], [ 2, 3 ] ],
+			[ pulseWidth, sourceClock ])
+
+		return Uint8Array.from([ byteValue ])
+	}
+
+	/**
+	 * @param {number} value
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeTimerAValue(value) {
+		return Uint8Array.from([ value ])
+	}
+
+	/**
+	 * @param {number} value
+	 * @returns {I2CBufferSource}
+	 */
+	static encodeTimerBValue(value) {
+		return Uint8Array.from([ value ])
 	}
 }

@@ -10,7 +10,7 @@ import { BASE_CENTURY_Y2K } from './defs.js'
  *  Control1,
  *  Control2Clear,
  *  Control3Clear,
- *  Time,
+ *  CoreTime, Time,
  *  Alarm,
  *  TimerControl,
  *  TimerAFrequencyControl,
@@ -64,6 +64,7 @@ export class PCF8523 {
 	 * @param {Control1} profile
 	 */
 	async setControl1(profile) {
+		if(this.#ampm_mode !== profile.ampm) { console.warn('ampm does not match class cache') }
 		return Common.setControl1(this.#bus, profile)
 	}
 
@@ -81,23 +82,33 @@ export class PCF8523 {
 		return Common.setControl3(this.#bus, profile)
 	}
 
+	/**
+	 * @param {boolean} [ampm_mode]
+	 * @param {number} [century]
+	 */
 	async getTime(ampm_mode = undefined, century = undefined) {
 		return Common.getTime(this.#bus, ampm_mode ?? this.#ampm_mode, century ?? this.#century)
 	}
 
 	/**
-	 * @param {Time} time
+	 * @param {CoreTime} time
+	 * @param {boolean} [ampm_mode]
+	 * @param {number} [century]
 	 */
 	async setTime(time, ampm_mode = undefined, century = undefined) {
 		return Common.setTime(this.#bus, time, ampm_mode ?? this.#ampm_mode, century ?? this.#century)
 	}
 
+	/**
+	 * @param {boolean} [ampm_mode]
+	 */
 	async getAlarm(ampm_mode = undefined) {
 		return Common.getAlarm(this.#bus, ampm_mode ?? this.#ampm_mode)
 	}
 
 	/**
 	 * @param {Alarm} profile
+	 * @param {boolean} [ampm_mode]
 	 */
 	async setAlarm(profile, ampm_mode = undefined) {
 		return Common.setAlarm(this.#bus, profile, ampm_mode ?? this.#ampm_mode)

@@ -34,7 +34,7 @@ export class Common {
 	 * @param {I2CAddressedBus} bus
 	 */
 	static async softReset(bus) {
-		return bus.writeI2cBlock(REGISTER.CONTROL_1, Uint8Array.from([ RESET_MAGIC_VALUE ]))
+		await bus.writeI2cBlock(REGISTER.CONTROL_1, Uint8Array.from([ RESET_MAGIC_VALUE ]))
 	}
 
 	/**
@@ -92,7 +92,7 @@ export class Common {
 	 */
 	static async setControl1(bus, profile) {
 		const buffer = Converter.encodeControl1(profile)
-		return bus.writeI2cBlock(REGISTER.CONTROL_1, buffer)
+		await bus.writeI2cBlock(REGISTER.CONTROL_1, buffer)
 	}
 
 	/**
@@ -101,7 +101,7 @@ export class Common {
 	 */
 	static async setControl2(bus, profile) {
 		const buffer = Converter.encodeControl2(profile)
-		return bus.writeI2cBlock(REGISTER.CONTROL_2, buffer)
+		await bus.writeI2cBlock(REGISTER.CONTROL_2, buffer)
 	}
 
 	/**
@@ -110,7 +110,7 @@ export class Common {
 	 */
 	static async setControl3(bus, profile) {
 		const buffer = Converter.encodeControl3(profile)
-		return bus.writeI2cBlock(REGISTER.CONTROL_3, buffer)
+		await bus.writeI2cBlock(REGISTER.CONTROL_3, buffer)
 	}
 
 	/**
@@ -126,13 +126,13 @@ export class Common {
 
 	/**
 	 * @param {I2CAddressedBus} bus
-	 * @param {Time} time
+	 * @param {CoreTime} time
 	 * @param {boolean} ampm_mode
 	 * @param {number} century
 	 */
 	static async setTime(bus, time, ampm_mode, century) {
 		const buffer = Converter.encodeTime(time, ampm_mode, century)
-		return bus.writeI2cBlock(REGISTER_BLOCK.TIME.START, buffer)
+		await bus.writeI2cBlock(REGISTER_BLOCK.TIME.START, buffer)
 	}
 
 	/**
@@ -152,7 +152,7 @@ export class Common {
 	 */
 	static async setAlarm(bus, alarm, ampm_mode) {
 		const buffer = Converter.encodeAlarm(alarm, ampm_mode)
-		return bus.writeI2cBlock(REGISTER_BLOCK.ALARM.START, buffer)
+		await bus.writeI2cBlock(REGISTER_BLOCK.ALARM.START, buffer)
 	}
 
 	/**
@@ -171,7 +171,7 @@ export class Common {
 	*/
 	static async setOffset(bus, mode, offsetValue) {
 		const buffer = Converter.encodeOffset(mode, offsetValue)
-		return bus.writeI2cBlock(REGISTER.OFFSET, buffer)
+		await bus.writeI2cBlock(REGISTER.OFFSET, buffer)
 	}
 
 	/**
@@ -251,7 +251,8 @@ export class Common {
 	 * @param {TimerAFrequencyControl} profile
 	 */
 	static async setTimerAControl(bus, profile) {
-		throw new Error('not implemented')
+		const buffer = Converter.encodeTimerAControl(profile)
+		await bus.writeI2cBlock(REGISTER.TIMER_A_FREQ_CONTROL, buffer)
 	}
 
 	/**
@@ -259,22 +260,25 @@ export class Common {
 	 * @param {TimerBFrequencyControl} profile
 	 */
 	static async setTimerBControl(bus, profile) {
-		throw new Error('not implemented')
+		const buffer = Converter.encodeTimerBControl(profile)
+		await bus.writeI2cBlock(REGISTER.TIMER_B_FREQ_CONTROL, buffer)
 	}
 
 	/**
 	 * @param {I2CAddressedBus} bus
-	 * @param {number} profile
+	 * @param {number} value
 	 */
-	static async setTimerAValue(bus, profile) {
-		throw new Error('not implemented')
+	static async setTimerAValue(bus, value) {
+		const buffer = Converter.encodeTimerAValue(value)
+		await bus.writeI2cBlock(REGISTER.TIMER_A_REG, buffer)
 	}
 
 	/**
 	 * @param {I2CAddressedBus} bus
-	 * @param {number} profile
+	 * @param {number} value
 	 */
-	static async setTimerBValue(bus, profile) {
-		throw new Error('not implemented')
+	static async setTimerBValue(bus, value) {
+		const buffer = Converter.encodeTimerBValue(value)
+		await bus.writeI2cBlock(REGISTER.TIMER_B_REG, buffer)
 	}
 }
