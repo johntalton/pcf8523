@@ -293,7 +293,6 @@ describe('PCF8523', () => {
     const device = new PCF8523(bus)
 
     await device.setControl2({
-			clearWatchdogAFlag: false,
 			clearCountdownAFlag: false,
 			clearCountdownBFlag: false,
 			clearAlarmFlag: false,
@@ -318,7 +317,6 @@ describe('PCF8523', () => {
     const device = new PCF8523(bus)
 
     await device.setControl2({
-			clearWatchdogAFlag: false,
 			clearCountdownAFlag: true,
 			clearCountdownBFlag: false,
 			clearAlarmFlag: false,

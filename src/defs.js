@@ -134,7 +134,6 @@ export const TIMER_B_PULSE_WIDTH = {
 
 /**
  * @typedef {Object} Control2ClearFlags
- * @property {boolean} [clearWatchdogAFlag = false]
  * @property {boolean} [clearCountdownAFlag = false]
  * @property {boolean} [clearCountdownBFlag = false]
  * @property {boolean} [clearSecondFlag = false]
@@ -200,7 +199,6 @@ export const TIMER_B_PULSE_WIDTH = {
  * @property {boolean} integrity
  * @property {boolean} [pm]
  * @property {string} weekday
- * @property {number} weekdayValue
  * @property {string} month
 */
 

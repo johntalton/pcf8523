@@ -1116,7 +1116,6 @@ describe('Converter', () => {
 
 		it('should encode with alt clear', () => {
 			const ab = Converter.encodeControl2({
-				clearWatchdogAFlag: true,
 				clearCountdownAFlag: true,
 				clearCountdownBFlag: true,
 
@@ -1129,7 +1128,7 @@ describe('Converter', () => {
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)
 
-			assert.equal(u8[0], 0b0001_1111)
+			assert.equal(u8[0], 0b1001_1111)
 		})
 	})
 
@@ -1193,6 +1192,170 @@ describe('Converter', () => {
 			assert.equal(u8[4], 0b0000_0000)
 			assert.equal(u8[5], 0b0000_0000)
 			assert.equal(u8[6], 0b0000_0000)
+		})
+	})
+
+	describe('encodeAlarmMinute', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeAlarmMinute({
+				minuteEnabled: false,
+				minute: 0
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b1000_0000)
+		})
+
+		it('should encode unique', () => {
+			const ab = Converter.encodeAlarmMinute({
+				minuteEnabled: true,
+				minute: 42
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0100_0010)
+		})
+	})
+
+	describe('encodeAlarmHour', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: false,
+				hour: 0
+			}, false)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b1000_0000)
+		})
+
+		it('should encode unique low hour', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: true,
+				hour: 4
+			}, false)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0000_0100)
+		})
+
+		it('should encode unique high hour', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: true,
+				hour: 14
+			}, false)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0001_0100)
+		})
+
+		it('should encode 12-hour', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: false,
+				hour: 0
+			}, true)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b1000_0000)
+		})
+
+		it('should encode unique low 12-hour', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: true,
+				hour: 4
+			}, true)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0000_0100)
+		})
+
+		it('should encode unique high 12-hour', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: true,
+				hour: 13
+			}, true)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0011_0011)
+		})
+	})
+
+	describe('encodeAlarmDay', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeAlarmDay({
+				dayEnabled: false,
+				day: 0
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b1000_0000)
+		})
+
+		it('should encode unique', () => {
+			const ab = Converter.encodeAlarmDay({
+				dayEnabled: true,
+				day: 31
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0011_0001)
+		})
+	})
+
+	describe('encodeAlarmWeekday', () => {
+		it('should encode', () => {
+			const ab = Converter.encodeAlarmWeekday({
+				weekdayEnabled: false,
+				weekdayValue: 0
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b1000_0000)
+		})
+
+		it('should encode unique', () => {
+			const ab = Converter.encodeAlarmWeekday({
+				weekdayEnabled: true,
+				weekdayValue: 7
+			})
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0000_0111)
 		})
 	})
 

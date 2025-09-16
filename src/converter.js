@@ -582,7 +582,6 @@ export class Converter {
 			countdownBInterruptEnabled,
 		} = profile
 
-		const clearWatchdogAFlag = profile.clearWatchdogAFlag ?? false
 		const clearCountdownAFlag = profile.clearCountdownAFlag ?? false
 		const clearCountdownBFlag = profile.clearCountdownBFlag ?? false
 		const clearSecondFlag = profile.clearSecondFlag ?? false
@@ -593,7 +592,7 @@ export class Converter {
 			[2, 1], [1, 1], [0, 1]
 		],
 		[
-			clearWatchdogAFlag ? BIT_UNSET : BIT_SET,
+			BIT_UNSET, // watchdog is cleared on read
 			clearCountdownAFlag ? BIT_UNSET : BIT_SET,
 			clearCountdownBFlag ? BIT_UNSET : BIT_SET,
 			clearSecondFlag ? BIT_UNSET : BIT_SET,
@@ -630,6 +629,9 @@ export class Converter {
 			pmSwitchoverEnabled ? BIT_UNSET : BIT_SET,
 			pmDirectSwitchingEnabled ? BIT_SET : BIT_UNSET
 		])
+
+		// todo automatically set
+		if(powerMode === 0b110) { throw new Error('power mode not allowed') }
 
 		const byteValue = BitSmush.smushBits([
 			[ 7, 3 ], [ 3, 1 ], [2, 1], [ 1, 1 ], [ 0, 1 ]
