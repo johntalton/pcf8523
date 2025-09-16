@@ -207,7 +207,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0,
 			minutes: 0,
 			hours: 0,
-			preferred: [ 'milliseconds', 'microseconds' ]
+			preferred: [ 'microseconds', 'milliseconds' ]
 		})
 	})
 	it('should convert min value for 4 KHz', () => {
@@ -218,7 +218,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0,
 			minutes: 0,
 			hours: 0,
-			preferred: [ 'milliseconds', 'microseconds' ]
+			preferred: [ 'microseconds', 'milliseconds' ]
 		})
 	})
 	it('should convert max value for 4 KHz', () => {
@@ -229,7 +229,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0.062,
 			minutes: 0.001,
 			hours: 0,
-			preferred: [ 'milliseconds', 'microseconds' ]
+			preferred: [ 'microseconds', 'milliseconds' ]
 		})
 	})
 	it('should convert unique value for 4 KHz', () => {
@@ -240,7 +240,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0.018,
 			minutes: 0,
 			hours: 0,
-			preferred: [ 'milliseconds', 'microseconds' ]
+			preferred: [ 'microseconds', 'milliseconds' ]
 		})
 	})
 
@@ -252,7 +252,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0,
 			minutes: 0,
 			hours: 0,
-			preferred: [ 'microseconds', 'seconds' ]
+			preferred: [ 'milliseconds', 'seconds' ]
 		})
 	})
 	it('should convert min value for 64 Hz', () => {
@@ -263,7 +263,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0.015,
 			minutes: 0,
 			hours: 0,
-			preferred: [ 'microseconds', 'seconds' ]
+			preferred: [ 'milliseconds', 'seconds' ]
 		})
 	})
 	it('should convert max value for 64 Hz', () => {
@@ -274,7 +274,7 @@ describe('timerValueToUnit', () => {
 			seconds: 3.984,
 			minutes: 0.066,
 			hours: 0.001,
-			preferred: [ 'microseconds', 'seconds' ]
+			preferred: [ 'milliseconds', 'seconds' ]
 		})
 	})
 	it('should convert unique value for 64 Hz', () => {
@@ -285,7 +285,7 @@ describe('timerValueToUnit', () => {
 			seconds: 0.656,
 			minutes: 0.01,
 			hours: 0,
-			preferred: [ 'microseconds', 'seconds' ]
+			preferred: [ 'milliseconds', 'seconds' ]
 		})
 	})
 
