@@ -14,7 +14,8 @@ import {
 	decodeTimeToDate,
 	BASE_CENTURY_Y2K,
 	encodeTimeFromDate,
-	encodeBCD
+	encodeBCD,
+	timerValueToUnit
 } from '@johntalton/pcf8523'
 
 const encodeBCD_63_34 = value => encodeBCD(value, 6,3, 3,4)
@@ -193,6 +194,278 @@ describe('encodeTimeFromDate', () => {
 			weekdayValue: 3,
 			monthsValue: 10,
 			year4digit: 2525
+		})
+	})
+})
+
+describe('timerValueToUnit', () => {
+	it('should convert zero value for 4 KHz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_4_KZ, 0)
+		assert.deepEqual(result, {
+			microseconds: 0,
+			milliseconds: 0,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'milliseconds', 'microseconds' ]
+		})
+	})
+	it('should convert min value for 4 KHz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_4_KZ, 1)
+		assert.deepEqual(result, {
+			microseconds: 244.14,
+			milliseconds: 0.244,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'milliseconds', 'microseconds' ]
+		})
+	})
+	it('should convert max value for 4 KHz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_4_KZ, 255)
+		assert.deepEqual(result, {
+			microseconds: 62255.859,
+			milliseconds: 62.255,
+			seconds: 0.062,
+			minutes: 0.001,
+			hours: 0,
+			preferred: [ 'milliseconds', 'microseconds' ]
+		})
+	})
+	it('should convert unique value for 4 KHz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_4_KZ, 77)
+		assert.deepEqual(result, {
+			microseconds: 18798.828,
+			milliseconds: 18.798,
+			seconds: 0.018,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'milliseconds', 'microseconds' ]
+		})
+	})
+
+	it('should convert zero value for 64 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_64_HZ, 0)
+		assert.deepEqual(result, {
+			microseconds: 0,
+			milliseconds: 0,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'microseconds', 'seconds' ]
+		})
+	})
+	it('should convert min value for 64 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_64_HZ, 1)
+		assert.deepEqual(result, {
+			microseconds: 15625,
+			milliseconds: 15.625,
+			seconds: 0.015,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'microseconds', 'seconds' ]
+		})
+	})
+	it('should convert max value for 64 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_64_HZ, 255)
+		assert.deepEqual(result, {
+			microseconds: 3984375,
+			milliseconds: 3984.375,
+			seconds: 3.984,
+			minutes: 0.066,
+			hours: 0.001,
+			preferred: [ 'microseconds', 'seconds' ]
+		})
+	})
+	it('should convert unique value for 64 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_64_HZ, 42)
+		assert.deepEqual(result, {
+			microseconds: 656250,
+			milliseconds: 656.25,
+			seconds: 0.656,
+			minutes: 0.01,
+			hours: 0,
+			preferred: [ 'microseconds', 'seconds' ]
+		})
+	})
+
+	it('should convert zero value for 1 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_HZ, 0)
+		assert.deepEqual(result, {
+			microseconds: 0,
+			milliseconds: 0,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'seconds' ]
+		})
+	})
+	it('should convert min value for 1 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_HZ, 1)
+		assert.deepEqual(result, {
+			microseconds: 1000000,
+			milliseconds: 1000,
+			seconds: 1,
+			minutes: 0.016,
+			hours: 0,
+			preferred: [ 'seconds' ]
+		})
+	})
+	it('should convert max value for 1 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_HZ, 255)
+		assert.deepEqual(result, {
+			microseconds: 255000000,
+			milliseconds: 255000,
+			seconds: 255,
+			minutes: 4.25,
+			hours: 0.070,
+			preferred: [ 'seconds' ]
+		})
+	})
+	it('should convert unique value for 1 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_HZ, 254)
+		assert.deepEqual(result, {
+			microseconds: 254000000,
+			milliseconds: 254000,
+			seconds: 254,
+			minutes: 4.233,
+			hours: 0.07,
+			preferred: [ 'seconds' ]
+		})
+	})
+
+	it('should convert zero value for 1/60 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_60_HZ, 0)
+		assert.deepEqual(result, {
+			microseconds: 0,
+			milliseconds: 0,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'minutes' ]
+		})
+	})
+	it('should convert min value for 1/60 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_60_HZ, 1)
+		assert.deepEqual(result, {
+			microseconds: 60000000,
+			milliseconds: 60000,
+			seconds: 60,
+			minutes: 1,
+			hours: 0.016,
+			preferred: [ 'minutes' ]
+		})
+	})
+	it('should convert max value for 1/60 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_60_HZ, 255)
+		assert.deepEqual(result, {
+			microseconds: 15300000000,
+			milliseconds: 15300000,
+			seconds: 15300,
+			minutes: 255,
+			hours: 4.25,
+			preferred: [ 'minutes' ]
+		})
+	})
+	it('should convert unique value for 1/60 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_60_HZ, 127)
+		assert.deepEqual(result, {
+			microseconds: 7620000000,
+			milliseconds: 7620000,
+			seconds: 7620,
+			minutes: 127,
+			hours: 2.116,
+			preferred: [ 'minutes' ]
+		})
+	})
+
+	it('should convert zero value for 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600_HZ, 0)
+		assert.deepEqual(result, {
+			microseconds: 0,
+			milliseconds: 0,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'hours' ]
+		})
+	})
+	it('should convert min value for 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600_HZ, 1)
+		assert.deepEqual(result, {
+			microseconds: 3600000000,
+			milliseconds: 3600000,
+			seconds: 3600,
+			minutes: 60,
+			hours: 1,
+			preferred: [ 'hours' ]
+		})
+	})
+	it('should convert max value for 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600_HZ, 255)
+		assert.deepEqual(result, {
+			microseconds: 918000000000,
+			milliseconds: 918000000,
+			seconds: 918000,
+			minutes: 15300,
+			hours: 255,
+			preferred: [ 'hours' ]
+		})
+	})
+	it('should convert unique value for 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600_HZ, 77)
+		assert.deepEqual(result, {
+			microseconds: 277200000000,
+			milliseconds: 277200000,
+			seconds: 277200,
+			minutes: 4620,
+			hours: 77,
+			preferred: [ 'hours' ]
+		})
+	})
+
+	it('should convert zero value for alt 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600__ALT_1_HZ, 0)
+		assert.deepEqual(result, {
+			microseconds: 0,
+			milliseconds: 0,
+			seconds: 0,
+			minutes: 0,
+			hours: 0,
+			preferred: [ 'hours' ]
+		})
+	})
+	it('should convert min value for alt 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600__ALT_1_HZ, 1)
+		assert.deepEqual(result, {
+			microseconds: 3600000000,
+			milliseconds: 3600000,
+			seconds: 3600,
+			minutes: 60,
+			hours: 1,
+			preferred: [ 'hours' ]
+		})
+	})
+	it('should convert max value for alt 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600__ALT_1_HZ, 255)
+		assert.deepEqual(result, {
+			microseconds: 918000000000,
+			milliseconds: 918000000,
+			seconds: 918000,
+			minutes: 15300,
+			hours: 255,
+			preferred: [ 'hours' ]
+		})
+	})
+	it('should convert unique value for alt 1/3600 Hz', () => {
+		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_1_3600__ALT_1_HZ, 42)
+		assert.deepEqual(result, {
+			microseconds: 151200000000,
+			milliseconds: 151200000,
+			seconds: 151200,
+			minutes: 2520,
+			hours: 42,
+			preferred: [ 'hours' ]
 		})
 	})
 })

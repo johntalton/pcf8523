@@ -12,6 +12,8 @@ import {
 	MONTHS_MAP,
 	OFFSET_LSB_PPM,
 	OFFSET_MODE,
+	SOURCE_CLOCK_PREFERRED_UNIT_MAP,
+	SOURCE_CLOCK_VALUE_HZ_MAP,
 	WEEKDAYS_MAP
 } from './defs.js'
 
@@ -30,7 +32,8 @@ import {
  *  AlarmHour,
  *  AlarmDay,
  *  AlarmWeekday,
- *  Alarm
+ *  Alarm,
+ TIMER_AB_SOURCE_CLOCK
  * } from './defs.js'
  */
 
@@ -124,6 +127,35 @@ export function encodeTimeFromDate(date) {
 		weekdayValue,
 		monthsValue,
 		year4digit
+	}
+}
+
+/**
+ * @param {TIMER_AB_SOURCE_CLOCK} sourceClock
+ * @param {number} value
+ */
+export function timerValueToUnit(sourceClock, value) {
+	if(value < 0 || value > 255) { throw new RangeError('invalid value') }
+	const devisor = SOURCE_CLOCK_VALUE_HZ_MAP[sourceClock]
+	if(devisor === undefined) { throw new RangeError('invalid source clock') }
+
+	const trunc3 = (/** @type {number} */ v) => Math.trunc(v * 1000) / 1000
+
+	const seconds = value / devisor
+	const milliseconds = seconds * 1000
+	const microseconds = milliseconds * 1000
+	const minutes = seconds / 60
+	const hours = minutes / 60
+
+	const preferred = SOURCE_CLOCK_PREFERRED_UNIT_MAP[sourceClock]
+
+	return {
+		microseconds: trunc3(microseconds),
+		milliseconds: trunc3(milliseconds),
+		seconds: trunc3(seconds),
+		minutes: trunc3(minutes),
+		hours: trunc3(hours),
+		preferred
 	}
 }
 
