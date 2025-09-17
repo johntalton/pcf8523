@@ -8,7 +8,6 @@ import {
 	RESET_MAGIC_VALUE } from './defs.js'
 
 /**
- * @import { I2CBufferSource } from '@johntalton/and-other-delights'
  * @import {
  *  Control1,
  *  Control2, Control2Clear,
@@ -24,7 +23,6 @@ import {
  *  OFFSET_MODE
  * } from './defs.js'
  */
-
 
 export class Common {
 	/**

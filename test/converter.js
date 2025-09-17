@@ -18,10 +18,10 @@ import {
 	timerValueToUnit
 } from '@johntalton/pcf8523'
 
-const encodeBCD_63_34 = value => encodeBCD(value, 6,3, 3,4)
-const encodeBCD_41_34 = value => encodeBCD(value, 4,1, 3,4)
-const encodeBCD_52_34 = value => encodeBCD(value, 5,2, 3,4)
-const encodeBCD_74_34 = value => encodeBCD(value, 7,4, 3,4)
+const encodeBCD_63_34 = (/** @type {number} */ value) => encodeBCD(value, 6,3, 3,4)
+const encodeBCD_41_34 = (/** @type {number} */ value) => encodeBCD(value, 4,1, 3,4)
+const encodeBCD_52_34 = (/** @type {number} */ value) => encodeBCD(value, 5,2, 3,4)
+const encodeBCD_74_34 = (/** @type {number} */ value) => encodeBCD(value, 7,4, 3,4)
 
 describe('decodeBCD', () => {
 	it('should decode', () => {
@@ -172,6 +172,7 @@ describe('decodeTimeToDate', () => {
 			monthsValue: 5,
 			day: 5,
 			hour: 2,
+			weekdayValue: 0,
 			minute: 30,
 			second: 1
 		})
@@ -199,6 +200,18 @@ describe('encodeTimeFromDate', () => {
 })
 
 describe('timerValueToUnit', () => {
+	it('should throw if value is negative', () => {
+		assert.throws(() => timerValueToUnit(0, -42))
+	})
+
+	it('should throw if value is large positive', () => {
+		assert.throws(() => timerValueToUnit(0, 300))
+	})
+
+	it('should throw if source Clock undefined', () => {
+		assert.throws(() => timerValueToUnit(42, 0))
+	})
+
 	it('should convert zero value for 4 KHz', () => {
 		const result = timerValueToUnit(TIMER_AB_SOURCE_CLOCK.SOURCE_4_KZ, 0)
 		assert.deepEqual(result, {
@@ -669,6 +682,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 0,
 				weekdayValue: 0,
@@ -690,6 +704,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 0,
 				weekdayValue: 0,
@@ -697,6 +712,50 @@ describe('Converter', () => {
 				monthsValue: 0,
 				month: undefined,
 				year4digit: 900
+			})
+		})
+
+		it('should decode 12-hour am value', () => {
+			const buffer = Uint8Array.from([
+				0, 0, 0b0000_0001, 0, 0, 0, 0
+			])
+
+			const result = Converter.decodeTime(buffer.buffer, true, 0)
+			assert.deepEqual(result, {
+				integrity: true,
+				second: 0,
+				minute: 0,
+				hour: 1,
+				hour24: 1,
+				pm: false,
+				day: 0,
+				weekdayValue: 0,
+				weekday: 'Sunday',
+				monthsValue: 0,
+				month: undefined,
+				year4digit: 0
+			})
+		})
+
+		it('should decode 12-hour pm value', () => {
+			const buffer = Uint8Array.from([
+				0, 0, 0b0011_0001, 0, 0, 0, 0
+			])
+
+			const result = Converter.decodeTime(buffer.buffer, true, 0)
+			assert.deepEqual(result, {
+				integrity: true,
+				second: 0,
+				minute: 0,
+				hour: 11,
+				hour24: 23,
+				pm: true,
+				day: 0,
+				weekdayValue: 0,
+				weekday: 'Sunday',
+				monthsValue: 0,
+				month: undefined,
+				year4digit: 0
 			})
 		})
 
@@ -715,6 +774,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 25,
 				weekdayValue: 0,
@@ -740,6 +800,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 21,
 				weekdayValue: 0,
@@ -765,6 +826,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 19,
 				weekdayValue: 0,
@@ -790,6 +852,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 19,
 				weekdayValue: 0,
@@ -815,6 +878,7 @@ describe('Converter', () => {
 				second: 0,
 				minute: 0,
 				hour: 0,
+				hour24: 0,
 				pm: undefined,
 				day: 15,
 				weekdayValue: 0,
@@ -826,12 +890,120 @@ describe('Converter', () => {
 		})
 	})
 
-	// describe('decodeAlarm', () => {
-	// 	it('should', () => {
-	// 		const buffer = Uint8Array.from([ 0 ])
-	// 		const result = Converter.decodeAlarm(buffer)
 
-	// 		assert.equal(result, false)
+	describe('decodeAlarmMinute', () => {
+		it('should decode', () => {
+			const buffer = Uint8Array.from([ 0b1000_0000 ])
+			const result = Converter.decodeAlarmMinute(buffer)
+
+			assert.deepEqual(result, {
+				minute: 0,
+				minuteEnabled: false
+			})
+		})
+
+
+		it('should decode unique value', () => {
+			const buffer = Uint8Array.from([ 0b0001_0010 ])
+			const result = Converter.decodeAlarmMinute(buffer)
+
+			assert.deepEqual(result, {
+				minute: 12,
+				minuteEnabled: true
+			})
+		})
+
+		it('should decode unique value from ArrayBuffer', () => {
+			const buffer = Uint8Array.from([ 0b0011_1000 ])
+			const result = Converter.decodeAlarmMinute(buffer.buffer)
+
+			assert.deepEqual(result, {
+				minute: 38,
+				minuteEnabled: true
+			})
+		})
+	})
+
+	describe('decodeAlarmHour', () => {
+		it('should decode', () => {
+			const buffer = Uint8Array.from([ 0b1000_0000 ])
+			const result = Converter.decodeAlarmHour(buffer, false)
+
+			assert.deepEqual(result, {
+				hour: 0,
+				pm: undefined,
+				hour24: 0,
+				hourEnabled: false
+			})
+		})
+
+		it('should decode unique pm value from ArrayBuffer', () => {
+			const buffer = Uint8Array.from([ 0b0010_1000 ])
+			const result = Converter.decodeAlarmHour(buffer.buffer, true)
+
+			assert.deepEqual(result, {
+				hour: 8,
+				pm: true,
+				hour24: 20,
+				hourEnabled: true
+			})
+		})
+	})
+
+	describe('decodeAlarmDay', () => {
+		it('should decode', () => {
+			const buffer = Uint8Array.from([ 0b1000_0000 ])
+			const result = Converter.decodeAlarmDay(buffer)
+
+			assert.deepEqual(result, {
+				day: 0,
+				dayEnabled: false
+			})
+		})
+
+		it('should decode unique value from ArrayBuffer', () => {
+			const buffer = Uint8Array.from([ 0b0000_0100 ])
+			const result = Converter.decodeAlarmDay(buffer.buffer)
+
+			assert.deepEqual(result, {
+				day: 4,
+				dayEnabled: true
+			})
+		})
+	})
+
+	describe('decodeAlarmWeekday', () => {
+		it('should decode', () => {
+			const buffer = Uint8Array.from([ 0b1000_0000 ])
+			const result = Converter.decodeAlarmWeekday(buffer)
+
+			assert.deepEqual(result, {
+				weekdayValue: 0,
+				weekday: 'Sunday',
+				weekdayEnabled: false
+			})
+		})
+
+		it('should decode unique value from ArrayBuffer', () => {
+			const buffer = Uint8Array.from([ 0b0000_0101 ])
+			const result = Converter.decodeAlarmWeekday(buffer.buffer)
+
+			assert.deepEqual(result, {
+				weekdayValue: 5,
+				weekday: 'Friday',
+				weekdayEnabled: true
+			})
+		})
+	})
+
+	// describe('decodeAlarm', () => {
+	// 	it('should decode', () => {
+	// 		const buffer = Uint8Array.from([ 0 ])
+	// 		const result = Converter.decodeAlarm(buffer, false)
+
+	// 		assert.deepEqual(result, {
+
+	// 		})
 	// 	})
 	// })
 
@@ -1047,6 +1219,19 @@ describe('Converter', () => {
 
 
 	describe('encodeControl1', () => {
+		it('should throw if capacitor invalid', () => {
+			assert.throws(() => {
+				Converter.encodeControl1({
+					capacitorSelection: 'Hello there',
+					stop: false,
+					ampm: false,
+					secondInterruptEnabled: false,
+					alarmInterruptEnabled: false,
+					correctionInterruptEnabled: false
+				})
+			})
+		})
+
 		it('should encode', () => {
 			const ab = Converter.encodeControl1({
 				capacitorSelection: CAP_VALUES.SEVEN,
@@ -1094,7 +1279,7 @@ describe('Converter', () => {
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)
 
-			assert.equal(u8[0], 0b1111_1000)
+			assert.equal(u8[0], 0b0111_1000)
 		})
 
 		it('should encode with clear', () => {
@@ -1111,7 +1296,7 @@ describe('Converter', () => {
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)
 
-			assert.equal(u8[0], 0b1110_0001)
+			assert.equal(u8[0], 0b0110_0001)
 		})
 
 		it('should encode with alt clear', () => {
@@ -1128,11 +1313,24 @@ describe('Converter', () => {
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)
 
-			assert.equal(u8[0], 0b1001_1111)
+			assert.equal(u8[0], 0b0001_1111)
 		})
 	})
 
 	describe('encodeControl3', () => {
+		it('should throw if reserved power mode', () => {
+			assert.throws(() => {
+				const ab = Converter.encodeControl3({
+					pmBatteryLowDetectionEnabled: false,
+					pmSwitchoverEnabled: false,
+					pmDirectSwitchingEnabled: false,
+
+					batterySwitchoverInterruptEnabled: false,
+					batteryLowInterruptEnabled: false,
+				})
+			})
+		})
+
 		it('should encode without clear', () => {
 			const ab = Converter.encodeControl3({
 				pmBatteryLowDetectionEnabled: true,
@@ -1171,12 +1369,56 @@ describe('Converter', () => {
 	})
 
 	describe('encodeTime', () => {
+		it('should throw if resulting 2digit year is negative', () => {
+			assert.throws(() => {
+				Converter.encodeTime({
+					second: 0,
+					minute: 0,
+					hour: 0,
+					day: 0,
+					weekdayValue: 0,
+					monthsValue: 0,
+					year4digit: 1
+				}, false, 100)
+			}, /^RangeError: .*\(after\)$/)
+		})
+
+		it('should throw if resulting 2digit year is greater then 2digits', () => {
+			assert.throws(() => {
+				Converter.encodeTime({
+					second: 0,
+					minute: 0,
+					hour: 0,
+					day: 0,
+					weekdayValue: 0,
+					monthsValue: 0,
+					year4digit: 200
+				}, false, 100)
+			}, /^RangeError: .*\(before\)$/)
+		})
+
+		it('should throw if pm not included in ampm mode', () => {
+			assert.throws(() => {
+				Converter.encodeTime({
+					second: 0,
+					minute: 0,
+					hour: 0,
+					// pm undefined intentionally
+					day: 0,
+					weekdayValue: 0,
+					monthsValue: 0,
+					year4digit: 200
+				}, true, 100)
+			})
+		})
+
 		it('should encode', () => {
 			const ab = Converter.encodeTime({
 				second: 0,
 				minute: 0,
 				hour: 0,
 				day: 0,
+				weekdayValue: 0,
 				monthsValue: 0,
 				year4digit: 0
 			}, false, 0)
@@ -1224,6 +1466,16 @@ describe('Converter', () => {
 	})
 
 	describe('encodeAlarmHour', () => {
+		it('should throw if pm not included in ampm mode', () => {
+			assert.throws(() => {
+				Converter.encodeAlarmHour({
+					hour: 0,
+					// pm intentionally not included
+					hourEnabled: true
+				}, true)
+			})
+		})
+
 		it('should encode', () => {
 			const ab = Converter.encodeAlarmHour({
 				hourEnabled: false,
@@ -1266,7 +1518,8 @@ describe('Converter', () => {
 		it('should encode 12-hour', () => {
 			const ab = Converter.encodeAlarmHour({
 				hourEnabled: false,
-				hour: 0
+				hour: 0,
+				pm: false
 			}, true)
 			const u8 = ArrayBuffer.isView(ab) ?
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
@@ -1279,7 +1532,8 @@ describe('Converter', () => {
 		it('should encode unique low 12-hour', () => {
 			const ab = Converter.encodeAlarmHour({
 				hourEnabled: true,
-				hour: 4
+				hour: 4,
+				pm: false
 			}, true)
 			const u8 = ArrayBuffer.isView(ab) ?
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
@@ -1292,14 +1546,29 @@ describe('Converter', () => {
 		it('should encode unique high 12-hour', () => {
 			const ab = Converter.encodeAlarmHour({
 				hourEnabled: true,
-				hour: 13
+				hour: 1,
+				pm: true,
 			}, true)
 			const u8 = ArrayBuffer.isView(ab) ?
 				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
 				new Uint8Array(ab)
 
 			assert.equal(ab.byteLength, 1)
-			assert.equal(u8[0], 0b0011_0011)
+			assert.equal(u8[0], 0b0010_0001)
+		})
+
+		it('should encode unique high 12-hour high', () => {
+			const ab = Converter.encodeAlarmHour({
+				hourEnabled: true,
+				hour: 11,
+				pm: true,
+			}, true)
+			const u8 = ArrayBuffer.isView(ab) ?
+				new Uint8Array(ab.buffer, ab.byteOffset, ab.byteLength) :
+				new Uint8Array(ab)
+
+			assert.equal(ab.byteLength, 1)
+			assert.equal(u8[0], 0b0011_0001)
 		})
 	})
 
@@ -1499,6 +1768,18 @@ describe('Converter', () => {
 	})
 
 	describe('encodeTimerAValue', () => {
+		it('should throw if value negative', () => {
+			assert.throws(() => {
+				Converter.encodeTimerAValue(-42)
+			})
+		})
+
+		it('should throw if value larger then max', () => {
+			assert.throws(() => {
+				Converter.encodeTimerAValue(300)
+			})
+		})
+
 		it('should encode', () => {
 			const ab = Converter.encodeTimerAValue(0)
 			const u8 = ArrayBuffer.isView(ab) ?
@@ -1519,6 +1800,18 @@ describe('Converter', () => {
 	})
 
 	describe('encodeTimerBValue', () => {
+		it('should throw if value negative', () => {
+			assert.throws(() => {
+				Converter.encodeTimerBValue(-42)
+			})
+		})
+
+		it('should throw if value larger then max', () => {
+			assert.throws(() => {
+				Converter.encodeTimerBValue(300)
+			})
+		})
+
 		it('should encode', () => {
 			const ab = Converter.encodeTimerBValue(0)
 			const u8 = ArrayBuffer.isView(ab) ?

@@ -188,6 +188,7 @@ export const TIMER_B_PULSE_WIDTH = {
  * @property {number} second
  * @property {number} minute
  * @property {number} hour
+ * @property {boolean} [pm]
  * @property {number} day
  * @property {number} weekdayValue
  * @property {number} monthsValue
@@ -197,7 +198,7 @@ export const TIMER_B_PULSE_WIDTH = {
 /**
  * @typedef {Object} TimeExtended
  * @property {boolean} integrity
- * @property {boolean} [pm]
+ * @property {number} hour24
  * @property {string} weekday
  * @property {string} month
 */
@@ -259,6 +260,15 @@ export const TIMER_B_PULSE_WIDTH = {
  */
 
 /**
+ * @typedef {Object} AlarmHourMetadata
+* @property {number} [hour24]
+ */
+
+/**
+ * @typedef {AlarmHour & AlarmHourMetadata} AlarmHourExtended
+ */
+
+/**
  * @typedef {Object} AlarmDay
  * @property {boolean} dayEnabled
  * @property {number} day
@@ -283,6 +293,17 @@ export const OFFSET_LSB_PPM = {
 	MODE_0: 4.34,
 	MODE_1: 4.069
 }
+
+export const UN_ALLOWED_POWER_MODE = 0b110
+
+export const PM_SET_BIT = 0b0010_0000
+export const OS_MASK = 0x80
+export const SECONDS_MASK = 0x7F // ~OS_MASK
+
+export const SEVEN_BIT_MASK = 0b0111_1111
+export const SIGN_MASK = 0b0100_0000
+
+export const HOUR_OFFSET_FOR_PM = 12
 
 export const DEFAULT_PCF8523_ADDRESS = 0x68
 

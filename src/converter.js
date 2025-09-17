@@ -1,7 +1,6 @@
 import { BitSmush } from '@johntalton/bitsmush'
 
 import {
-	BASE_CENTURY_Y2K,
 	BIT_SET,
 	BIT_UNSET,
 	BYTE_LENGTH_ALARM,
@@ -9,11 +8,17 @@ import {
 	BYTE_LENGTH_TIME,
 	CAP_MAP,
 	CAP_VALUES,
+	HOUR_OFFSET_FOR_PM,
 	MONTHS_MAP,
 	OFFSET_LSB_PPM,
 	OFFSET_MODE,
+	PM_SET_BIT,
+	SECONDS_MASK,
+	SEVEN_BIT_MASK,
+	SIGN_MASK,
 	SOURCE_CLOCK_PREFERRED_UNIT_MAP,
 	SOURCE_CLOCK_VALUE_HZ_MAP,
+	UN_ALLOWED_POWER_MODE,
 	WEEKDAYS_MAP
 } from './defs.js'
 
@@ -29,7 +34,7 @@ import {
  *  TimerAFrequencyControl,
  *  TimerBFrequencyControl,
  *  AlarmMinute,
- *  AlarmHour,
+ *  AlarmHour, AlarmHourExtended,
  *  AlarmDay,
  *  AlarmWeekday,
  *  Alarm,
@@ -45,7 +50,6 @@ import {
  * @param {number} unitsLen
  */
 export function decodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
-	//return value - 6 * (value >> 4)
 	return 10 * BitSmush.extractBits(value, tensPos, tensLen) +
 		BitSmush.extractBits(value, unitsPos, unitsLen)
 }
@@ -58,7 +62,6 @@ export function decodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
  * @param {number} unitsLen
  */
 export function encodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
-	// return value + 6 * Math.floor(value / 10)
 	const tens = Math.floor(value / 10)
 	const units = value - (tens * 10)
 
@@ -67,14 +70,10 @@ export function encodeBCD(value, tensPos, tensLen, unitsPos, unitsLen) {
 		[ tens, units ])
 }
 
-const SEVEN_BIT_MASK = 0b0111_1111
-
 /**
  * @param {number} value
  */
 export function decode7BitTwosComplement(value) {
-	const SIGN_MASK = 0b0100_0000
-
 	if((value & SIGN_MASK) !== 0) { return -((~value & SEVEN_BIT_MASK) + 1) }
 	return value
 }
@@ -94,13 +93,15 @@ export function encode7BitTwosComplement(value) {
  * @returns {Date}
  */
 export function decodeTimeToDate(time) {
-	const { year4digit, monthsValue, day, hour, minute, second } = time
+	const { year4digit, monthsValue, day, hour, pm, minute, second } = time
+
+	const hour24 = pm === true ? hour + HOUR_OFFSET_FOR_PM : hour
 
 	return new Date(Date.UTC(
 		year4digit,
 		monthsValue - 1,
 		day,
-		hour, minute, second))
+		hour24, minute, second))
 }
 
 
@@ -178,8 +179,10 @@ export class Converter {
 		const alarmInterruptEnabled = BitSmush.extractBits(control1, 1, 1) === BIT_SET
 		const correctionInterruptEnabled = BitSmush.extractBits(control1, 0, 1) === BIT_SET
 
+		const capacitorSelection = capSelRaw === 0 ? CAP_VALUES.SEVEN : CAP_VALUES.TWELVE
+
 		return {
-			capacitorSelection: capSelRaw === 0 ? CAP_VALUES.SEVEN : CAP_VALUES.TWELVE,
+			capacitorSelection,
 			stop,
 			ampm,
 			secondInterruptEnabled,
@@ -282,7 +285,7 @@ export class Converter {
 		const hour = ampm_mode ?
 			decodeBCD(hoursByte, 4, 1, 3, 4) :
 			decodeBCD(hoursByte, 5, 2, 3, 4)
-		const pm = ampm_mode ? BitSmush.extractBits(hoursByte, 7, 1) === BIT_SET : undefined
+		const pm = ampm_mode ? BitSmush.extractBits(hoursByte, 5, 1) === BIT_SET : undefined
 		const day = decodeBCD(daysByte, 5, 2, 3, 4)
 		const weekdayValue = BitSmush.extractBits(weekdaysByte, 2, 3)
 		const weekday = WEEKDAYS_MAP[weekdayValue]
@@ -291,12 +294,14 @@ export class Converter {
 		const year2digit = decodeBCD(yearsByte, 7, 4, 3, 4)
 		const year4digit = century + year2digit
 
+		const hour24 = pm === true ? hour + HOUR_OFFSET_FOR_PM : hour
 
 		return {
 			integrity,
 			second,
 			minute,
 			hour,
+			hour24,
 			pm,
 			day,
 			weekdayValue,
@@ -330,7 +335,7 @@ export class Converter {
 	/**
 	 * @param {I2CBufferSource} buffer
 	 * @param {boolean} ampm_mode
-	 * @returns {AlarmHour}
+	 * @returns {AlarmHourExtended}
 	 */
 	static decodeAlarmHour(buffer, ampm_mode) {
 		const u8 = ArrayBuffer.isView(buffer) ?
@@ -345,9 +350,12 @@ export class Converter {
 			decodeBCD(byteValue, 4, 1, 3, 4) :
 			decodeBCD(byteValue, 5, 2, 3, 4)
 
+		const hour24 = pm === true ? hour + HOUR_OFFSET_FOR_PM : hour
+
 		return {
 			hourEnabled,
 			hour,
+			hour24,
 			pm
 		}
 	}
@@ -630,8 +638,9 @@ export class Converter {
 			pmDirectSwitchingEnabled ? BIT_SET : BIT_UNSET
 		])
 
-		// todo automatically set
-		if(powerMode === 0b110) { throw new Error('power mode not allowed') }
+		// todo If switching is disabled, then disable the direct bit
+		// so that the un-allowed power state can be avoided
+		if(powerMode === UN_ALLOWED_POWER_MODE) { throw new Error('power mode not allowed') }
 
 		const byteValue = BitSmush.smushBits([
 			[ 7, 3 ], [ 3, 1 ], [2, 1], [ 1, 1 ], [ 0, 1 ]
@@ -653,21 +662,21 @@ export class Converter {
 	 * @returns {I2CBufferSource}
 	 */
 	static encodeTime(time, ampm_mode, century) {
-		const { second, minute, hour, day, weekdayValue, monthsValue, year4digit } = time
+		const { second, minute, hour, pm, day, weekdayValue, monthsValue, year4digit } = time
 
 		if(year4digit < 1000) { console.warn('year less then 4 digits') }
 		const year2digit = year4digit - century
 		if(year2digit < 0) { throw new RangeError('year not in century (after)') }
 		if(year2digit >= 100) { throw new RangeError('year not in century (before)') }
 
-		const OS_MASK = 0x80
-		const SECONDS_MASK = 0x7F // ~OS_MASK
+		if(ampm_mode && (pm === undefined)) { throw new Error('pm undefined for ampm mode') }
+		const pmFlag = ampm_mode ? pm === true ? PM_SET_BIT : 0 : 0
 
 		return Uint8Array.from([
 			encodeBCD(second & SECONDS_MASK, 6, 3, 3, 4),
 			encodeBCD(minute, 6, 3, 3, 4),
 			ampm_mode ?
-				encodeBCD(hour, 4, 1, 3, 4) :
+				(pmFlag | encodeBCD(hour, 4, 1, 3, 4)):
 				encodeBCD(hour, 5, 2, 3, 4),
 			encodeBCD(day, 5, 2, 3, 4),
 			weekdayValue,
@@ -703,15 +712,19 @@ export class Converter {
 
 	/**
 	 * @param {number} hour
-	 * @param {boolean} ampm_mode
+	 * @param {boolean|undefined} pm
 	 * @param {boolean} enable
+	 * @param {boolean} ampm_mode
 	 * @returns {number}
 	 */
-	static _encodeAlarmHour(hour, ampm_mode, enable) {
+	static _encodeAlarmHour(hour, pm, enable, ampm_mode) {
 		const enableValue = enable ? BIT_UNSET : BIT_SET
-		// const ampm = ampm_mode ? ampmValue :
+		const pmFlag = ampm_mode ? pm === true ? PM_SET_BIT : 0 : 0
+
+		if(ampm_mode && (pm === undefined)) { throw new Error('pm undefined for ampm mode') }
+
 		const hourValue = ampm_mode ?
-			encodeBCD(hour, 4, 1, 3, 4) :
+			(pmFlag | encodeBCD(hour, 4, 1, 3, 4)) :
 			encodeBCD(hour, 5, 2, 3, 4)
 
 		return BitSmush.smushBits(
@@ -726,8 +739,8 @@ export class Converter {
 	 * @returns {I2CBufferSource}
 	 */
 	static encodeAlarmHour(profile, ampm_mode) {
-		const { hour, hourEnabled } = profile
-		const value = Converter._encodeAlarmHour(hour, ampm_mode, hourEnabled)
+		const { hour, pm, hourEnabled } = profile
+		const value = Converter._encodeAlarmHour(hour, pm, hourEnabled, ampm_mode)
 		return Uint8Array.from([ value ])
 	}
 
@@ -800,7 +813,7 @@ export class Converter {
 
 		return Uint8Array.from([
 			Converter._encodeAlarmMinute(minute, minuteEnabled),
-			Converter._encodeAlarmHour(hour, ampm_mode, hourEnabled),
+			Converter._encodeAlarmHour(hour, pm, hourEnabled, ampm_mode),
 			Converter._encodeAlarmDay(day, dayEnabled),
 			Converter._encodeAlarmWeekday(weekdayValue, weekdayEnabled)
 		])

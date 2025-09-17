@@ -8,19 +8,28 @@ import { BASE_CENTURY_Y2K, OFFSET_MODE, PCF8523, REGISTER, TIMER_A_CONTROL, TIME
 /**
  * @template T
  * @param {ArrayBufferLike|ArrayBufferView} [readBuffer]
- * @returns {T extends I2CAddressedBus}
+ * @returns {T extends I2CAddressedBus ? any : any}
  * */
 function mockABus(readBuffer) {
+  // @ts-ignore
   return {
     readList: [],
     writeList: [],
 
+    /**
+     * @param {any} command
+     * @param {number} length
+     */
     async readI2cBlock(command, length) {
       this.readList.push({ command, length })
 
       return readBuffer ?? new ArrayBuffer(length)
     },
 
+    /**
+     * @param {any} command
+     * @param {{ byteLength: any; }} buffer
+     */
     async writeI2cBlock(command, buffer) {
       this.writeList.push({ command, length: buffer.byteLength, buffer })
 
@@ -133,6 +142,7 @@ describe('PCF8523', () => {
       second: 0,
       minute: 0,
       hour: 0,
+      hour24: 0,
       pm: undefined,
       day: 0,
       weekdayValue: 0,
@@ -152,6 +162,7 @@ describe('PCF8523', () => {
     assert.deepEqual(alarm, {
       minute: 0, minuteEnabled: true,
       hour: 0, pm: undefined, hourEnabled: true,
+      hour24: 0,
       day: 0, dayEnabled: true,
       weekdayValue: 0, weekday: 'Sunday', weekdayEnabled: true
     })
@@ -309,7 +320,7 @@ describe('PCF8523', () => {
 			new Uint8Array(bus.writeList[0].buffer.buffer) :
 			new Uint8Array(bus.writeList[0].buffer)
 
-		assert.equal(u8[0], 0b1111_1000)
+		assert.equal(u8[0], 0b0111_1000)
   })
 
 	it('should set Control2 to unique value', async () => {
@@ -333,7 +344,7 @@ describe('PCF8523', () => {
 			new Uint8Array(bus.writeList[0].buffer.buffer) :
 			new Uint8Array(bus.writeList[0].buffer)
 
-		assert.equal(u8[0], 0b1011_1110)
+		assert.equal(u8[0], 0b0011_1110)
   })
 
 	it('should set Control3', async () => {
@@ -393,6 +404,7 @@ describe('PCF8523', () => {
 			minute: 0,
 			hour: 0,
 			day: 0,
+      weekdayValue: 0,
 			monthsValue: 0,
 			year4digit: 2000
 		}, false, BASE_CENTURY_Y2K)
@@ -421,6 +433,7 @@ describe('PCF8523', () => {
 			minute: 0,
 			hour: 0,
 			day: 0,
+      weekdayValue: 0,
 			monthsValue: 0,
 			year4digit: 2000
 		}, false, 1900))
@@ -435,6 +448,7 @@ describe('PCF8523', () => {
 			minute: 0,
 			hour: 0,
 			day: 0,
+      weekdayValue: 0,
 			monthsValue: 0,
 			year4digit: 2000
 		}, false, 2100))
@@ -450,6 +464,7 @@ describe('PCF8523', () => {
 			minute: 1,
 			hour: 13,
 			day: 30,
+      weekdayValue: 0,
 			monthsValue: 0,
 			year4digit: 2099
 		}, false, BASE_CENTURY_Y2K)
@@ -468,4 +483,124 @@ describe('PCF8523', () => {
 		assert.equal(u8[5], 0b0000_0000)
 		assert.equal(u8[6], 0b1001_1001)
 	})
+
+
+  it('should set AlarmMinute', () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setAlarmMinute({
+      minuteEnabled: true,
+      minute: 42
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+
+    const u8 = ArrayBuffer.isView(aBus.writeList[0].buffer) ?
+      new Uint8Array(aBus.writeList[0].buffer.buffer, aBus.writeList[0].buffer.byteOffset, 1) :
+      new Uint8Array(aBus.writeList[0].buffer, 0, 1)
+
+    assert.equal(u8[0], 0b0100_0010)
+  })
+
+  it('should set AlarmHour', () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setAlarmHour({
+      hourEnabled: true,
+      hour: 20
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+
+    const u8 = ArrayBuffer.isView(aBus.writeList[0].buffer) ?
+      new Uint8Array(aBus.writeList[0].buffer.buffer, aBus.writeList[0].buffer.byteOffset, 1) :
+      new Uint8Array(aBus.writeList[0].buffer, 0, 1)
+
+    assert.equal(u8[0], 0b0010_0000)
+  })
+
+  it('should set AlarmHour 12-hour mode', () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setAlarmHour({
+      hourEnabled: true,
+      hour: 11,
+      pm: true
+    }, true)
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+
+    const u8 = ArrayBuffer.isView(aBus.writeList[0].buffer) ?
+      new Uint8Array(aBus.writeList[0].buffer.buffer, aBus.writeList[0].buffer.byteOffset, 1) :
+      new Uint8Array(aBus.writeList[0].buffer, 0, 1)
+
+    assert.equal(u8[0], 0b0011_0001)
+  })
+
+  it('should set AlarmDay', () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setAlarmDay({
+      dayEnabled: true,
+      day: 31
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+
+    const u8 = ArrayBuffer.isView(aBus.writeList[0].buffer) ?
+      new Uint8Array(aBus.writeList[0].buffer.buffer, aBus.writeList[0].buffer.byteOffset, 1) :
+      new Uint8Array(aBus.writeList[0].buffer, 0, 1)
+
+    assert.equal(u8[0], 0b0011_0001)
+  })
+
+  it('should set AlarmWeekday', () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setAlarmWeekday({
+      weekdayEnabled: true,
+      weekdayValue: 2
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+
+    const u8 = ArrayBuffer.isView(aBus.writeList[0].buffer) ?
+      new Uint8Array(aBus.writeList[0].buffer.buffer, aBus.writeList[0].buffer.byteOffset, 1) :
+      new Uint8Array(aBus.writeList[0].buffer, 0, 1)
+
+    assert.equal(u8[0], 0b0000_0010)
+  })
+
+  it('should set Alarm', () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setAlarm({
+      minuteEnabled: true,
+      hourEnabled: true,
+      dayEnabled: true,
+      weekdayEnabled: true,
+
+      minute: 42,
+      hour: 4,
+      day: 1,
+      weekdayValue: 1
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 4)
+
+    const u8 = ArrayBuffer.isView(aBus.writeList[0].buffer) ?
+      new Uint8Array(aBus.writeList[0].buffer.buffer, aBus.writeList[0].buffer.byteOffset, 4) :
+      new Uint8Array(aBus.writeList[0].buffer, 0, 4)
+
+    assert.equal(u8[0], 0b0100_0010)
+    assert.equal(u8[1], 0b0000_0100)
+    assert.equal(u8[2], 0b0000_0001)
+    assert.equal(u8[3], 0b0000_0001)
+  })
 })
