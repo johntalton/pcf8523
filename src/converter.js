@@ -38,7 +38,7 @@ import {
  *  AlarmDay,
  *  AlarmWeekday,
  *  Alarm,
- TIMER_AB_SOURCE_CLOCK
+ *  TIMER_AB_SOURCE_CLOCK
  * } from './defs.js'
  */
 
@@ -107,12 +107,13 @@ export function decodeTimeToDate(time) {
 
 /**
  * @param {Date} date
+ * @param {boolean} ampm_mode
  * @returns {CoreTime}
  */
-export function encodeTimeFromDate(date) {
+export function encodeTimeFromDate(date, ampm_mode) {
 	const second = date.getUTCSeconds()
 	const minute = date.getUTCMinutes()
-	const hour = date.getUTCHours()
+	const hour24 = date.getUTCHours()
 
 	const day = date.getUTCDate()
 	const monthsValue = date.getUTCMonth() + 1
@@ -120,10 +121,14 @@ export function encodeTimeFromDate(date) {
 
 	const weekdayValue = date.getUTCDay()
 
+	const pm = ampm_mode === true ? hour24 >= HOUR_OFFSET_FOR_PM : undefined
+	const hour = ampm_mode === true ? (hour24 % HOUR_OFFSET_FOR_PM || HOUR_OFFSET_FOR_PM) : hour24
+
 	return {
 		second,
 		minute,
 		hour,
+		pm,
 		day,
 		weekdayValue,
 		monthsValue,

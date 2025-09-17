@@ -1,7 +1,16 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { BASE_CENTURY_Y2K, OFFSET_MODE, PCF8523, REGISTER, TIMER_A_CONTROL, TIMER_AB_SOURCE_CLOCK, TIMER_B_PULSE_WIDTH  } from '@johntalton/pcf8523'
+import {
+  BASE_CENTURY_Y2K,
+  OFFSET_MODE,
+  PCF8523,
+  REGISTER,
+  TIMER_A_CONTROL,
+  TIMER_AB_SOURCE_CLOCK,
+  TIMER_B_PULSE_WIDTH,
+  TIMER_CLOCK_FREQUENCY
+} from '@johntalton/pcf8523'
 
 /** @import { I2CAddressedBus } from '@johntalton/and-other-delights' */
 
@@ -111,6 +120,13 @@ describe('PCF8523', () => {
 
     const profile = await device.getControl3()
     assert.deepEqual(profile, DEFAULT_CONTROL_3)
+  })
+
+  it('should reject if profile invalid length', async () => {
+    const bus = mockABus(new ArrayBuffer(2)) // less then 3
+    const device = new PCF8523(bus)
+
+    await assert.rejects(() => device.getProfile())
   })
 
   it('should get profile', async () => {
@@ -602,5 +618,70 @@ describe('PCF8523', () => {
     assert.equal(u8[1], 0b0000_0100)
     assert.equal(u8[2], 0b0000_0001)
     assert.equal(u8[3], 0b0000_0001)
+  })
+
+  it('should set Offset', async () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setOffset(OFFSET_MODE.ONCE_EVERY_MINUTE, 42)
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+  })
+
+  it('should set TimerControl', async () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setTimerControl({
+      interruptAPulsedMode: false,
+      interruptBPulsedMode: false,
+      clockFrequencyValue: TIMER_CLOCK_FREQUENCY.FREQUENCY_32,
+      timerAControl: TIMER_A_CONTROL.COUNTDOWN,
+      countdownTimerBEnabled: false
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+  })
+
+  it('should set TimerAControl', async () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setTimerAControl({
+      sourceClock: TIMER_AB_SOURCE_CLOCK.SOURCE_1_60_HZ
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+  })
+
+  it('should set TimerBControl', async () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setTimerBControl({
+      sourceClock: TIMER_AB_SOURCE_CLOCK.SOURCE_1_60_HZ,
+      pulseWidth: TIMER_B_PULSE_WIDTH.WIDTH_218_75_MS
+    })
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+  })
+
+  it('should set TimerAValue', async () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setTimerAValue(42)
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
+  })
+
+  it('should set TimerBValue', async () => {
+    const aBus = mockABus()
+    const device = new PCF8523(aBus)
+    device.setTimerBValue(42)
+
+    assert.equal(aBus.writeList.length, 1)
+    assert.equal(aBus.writeList[0].length, 1)
   })
 })

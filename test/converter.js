@@ -185,12 +185,62 @@ describe('decodeTimeToDate', () => {
 describe('encodeTimeFromDate', () => {
 	it('should encode', () => {
 		const date = new Date(Date.UTC(2525, 9, 31, 0, 0, 42))
-		const time = encodeTimeFromDate(date)
+		const time = encodeTimeFromDate(date, false)
 
 		assert.deepEqual(time, {
 			second: 42,
 			minute: 0,
 			hour: 0,
+			pm: undefined,
+			day: 31,
+			weekdayValue: 3,
+			monthsValue: 10,
+			year4digit: 2525
+		})
+	})
+
+	it('should encode am in ampm mode', () => {
+		const date = new Date(Date.UTC(2525, 9, 31, 0, 0, 42))
+		const time = encodeTimeFromDate(date, true)
+
+		assert.deepEqual(time, {
+			second: 42,
+			minute: 0,
+			hour: 12,
+			pm: false,
+			day: 31,
+			weekdayValue: 3,
+			monthsValue: 10,
+			year4digit: 2525
+		})
+	})
+
+	it('should encode am afternoon in ampm mode', () => {
+		const date = new Date(Date.UTC(2525, 9, 31, 12, 1, 42))
+		const time = encodeTimeFromDate(date, true)
+
+		assert.deepEqual(time, {
+			second: 42,
+			minute: 1,
+			hour: 12,
+			pm: true,
+			day: 31,
+			weekdayValue: 3,
+			monthsValue: 10,
+			year4digit: 2525
+		})
+	})
+
+
+	it('should encode pm in ampm mode', () => {
+		const date = new Date(Date.UTC(2525, 9, 31, 23, 0, 42))
+		const time = encodeTimeFromDate(date, true)
+
+		assert.deepEqual(time, {
+			second: 42,
+			minute: 0,
+			hour: 11,
+			pm: true,
 			day: 31,
 			weekdayValue: 3,
 			monthsValue: 10,
