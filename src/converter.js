@@ -645,6 +645,7 @@ export class Converter {
 
 		// todo If switching is disabled, then disable the direct bit
 		// so that the un-allowed power state can be avoided
+		// direct = !switchover || direct
 		if(powerMode === UN_ALLOWED_POWER_MODE) { throw new Error('power mode not allowed') }
 
 		const byteValue = BitSmush.smushBits([
